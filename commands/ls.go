@@ -15,11 +15,13 @@ Print the parameters in one or more paths.
 func ls(c *ishell.Context) {
 	var err error
 	var pathList []string
-	defer cleanup() // recursive listing is per invocation
 	paths := c.Args
 	for i, p := range paths {
 		if p == "-R" {
 			ps.Recurse = true
+			defer func() {
+				ps.Recurse = false // recursive listing is per invocation
+			}()
 			paths = remove(paths, i)
 		}
 	}
@@ -41,10 +43,6 @@ func ls(c *ishell.Context) {
 			shell.Println(r)
 		}
 	}
-}
-
-func cleanup() {
-	ps.Recurse = false
 }
 
 func remove(slice []string, s int) []string {

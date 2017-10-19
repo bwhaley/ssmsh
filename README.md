@@ -8,12 +8,10 @@ go get github.com/kountable/pssh
 ## Usage
 First, set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
 
+### Basic features
 ```
-$ pssh
-Browse the EC2 Parameter Store
 /> help
-Commands:
-  cd           change your relative location within the parameter store
+  cd          change your relative location within the parameter store
   clear       clear the screen
   cp           not yet implemented
   decrypt   toggle parameter decryption
@@ -27,9 +25,22 @@ Commands:
   rm           remove parameters
 ```
 
+###  Inline commands
+```
+$ pssh put name=/foo/bar value=baz type=string
+```
+
+###  Read commands from files
+```
+$ cat << EOF > commands.txt
+put name=/foo/bar value=baz type=string
+put name=foo/baz value=bar type=string
+$ pssh -file commands.txt
+```
+
 
 ## todo
-* [ ] Testing
+* [ ] tests
 * [ ] cp
 * [ ] mv
 * [ ] Read commands from a file

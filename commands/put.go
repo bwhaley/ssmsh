@@ -7,13 +7,15 @@ import (
 	"github.com/abiosoft/ishell"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/kountable/pssh/parameterstore"
 )
 
 // TODO Inline syntax
 const putUsage string = `usage: put <newline>
 Create or update parameters. Enter one option per line, ending with a blank line.
-Example below. All fields except name, value,a nd type are optionalll fields except name
-and value are optional. Default type is String.
+All fields except name, value,a nd type are optionalll fields except name
+and value are optional. 
+Example:
 />put
 Input options. End with a blank line.
 ... name=/foo/bar
@@ -33,27 +35,48 @@ var validTypes = []string{"String", "StringList", "SecureString"}
 // Add or update parameters
 func put(c *ishell.Context) {
 	var err error
-	defer reset()
-	// Set the prompt explicitly rather than use SetMultiPrompt due to the unexpected 2nd line behavior
-	shell.SetPrompt("... ")
-	c.Println("Input options. End with a blank line.")
-	c.ReadMultiLinesFunc(putOptions)
-	if putParamInput.Type == nil {
-		putParamInput.Type = aws.String("String")
-	}
-	if putParamInput.Name == nil || putParamInput.Value == nil {
-		shell.Println("Error: name and value are required fields.")
+	putParamInput = ssm.PutParameterInput{}
+	var r bool
+	if len(c.Args) == 0 {
+		r = multiLinePut()
 	} else {
-		err = ps.Put(&putParamInput)
-		if err != nil {
-			shell.Println("Error: ", err)
-		}
+		r = inlinePut(c.Args)
+	}
+	if !r {
+		return
+	}
+	if putParamInput.Name == nil ||
+		putParamInput.Value == nil ||
+		putParamInput.Type == nil {
+		shell.Println("Error: name, type and value are required.")
+		return
+	}
+	err = ps.Put(&putParamInput)
+	if err != nil {
+		shell.Println("Error: ", err)
 	}
 }
 
-func reset() {
-	putParamInput = ssm.PutParameterInput{}
-	setPrompt(ps.Cwd)
+func multiLinePut() bool {
+	// Set the prompt explicitly rather than use SetMultiPrompt
+	// due to the unexpected 2nd line behavior
+	shell.SetPrompt("... ")
+	defer setPrompt(ps.Cwd)
+	shell.Println("Input options. End with a blank line.")
+	shell.ReadMultiLinesFunc(putOptions)
+	if putParamInput == (ssm.PutParameterInput{}) {
+		return false
+	}
+	return true
+}
+
+func inlinePut(options []string) bool {
+	for _, p := range options {
+		if putOptions(p) == false {
+			return false
+		}
+	}
+	return true
 }
 
 func putOptions(s string) bool {
@@ -89,10 +112,10 @@ func validate(f string, v string) bool {
 		if validator(v) {
 			return true
 		}
-		return false
 	}
-	shell.Println("Invalid input " + f + "=" + v)
+	shell.Println("Input error.")
 	shell.Println(putUsage)
+	putParamInput = ssm.PutParameterInput{}
 	return false
 }
 
@@ -113,7 +136,11 @@ func validateValue(s string) bool {
 }
 
 func validateName(s string) bool {
-	putParamInput.Name = aws.String(s)
+	if strings.HasPrefix(s, parameterstore.Delimiter) {
+		putParamInput.Name = aws.String(s)
+	} else {
+		putParamInput.Name = aws.String(ps.Cwd + parameterstore.Delimiter + s)
+	}
 	return true
 }
 

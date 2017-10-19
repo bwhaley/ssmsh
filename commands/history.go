@@ -53,6 +53,5 @@ func printParameterHistory(history []ssm.ParameterHistory) {
 		results = append(results, strings.Join(row, " | "))
 	}
 	output := columnize.SimpleFormat(results)
-	shell.Println("History of", aws.StringValue(history[0].Name))
 	shell.Println(output)
 }

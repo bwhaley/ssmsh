@@ -2,7 +2,6 @@ package parameterstore
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -20,7 +19,7 @@ type ParameterStore struct {
 	Cwd       string // The current working directory in the hierarchy
 	Decrypt   bool   // Decrypt values retrieved from Get
 	Key       string // The KMS key to use for SecureString parameters
-	Overwrite bool   // Overwrite parameters with Put, Mv or Cp
+	Overwrite bool   // Overwrite parameters with Put, Move or Copy
 	Recurse   bool   // List parameters recursively
 }
 
@@ -85,9 +84,11 @@ func (ps *ParameterStore) Rm(params []string) error {
 		Names: ps.inputPaths(params),
 	}
 	resp, err := ssmsvc.DeleteParameters(ssmParams)
-	fmt.Println(resp)
 	if err != nil {
 		return err
+	}
+	for _, r := range resp.InvalidParameters {
+		return errors.New("Could not delete invalid parameter " + aws.StringValue(r))
 	}
 	return nil
 }
@@ -140,7 +141,7 @@ func (ps *ParameterStore) Put(param *ssm.PutParameterInput) error {
 }
 
 // Cp copies a paramter from src to dest
-func (ps *ParameterStore) Cp(src string, dest string) (err error) {
+func (ps *ParameterStore) Copy(src string, dest string) (err error) {
 	return nil
 }
 
@@ -187,7 +188,12 @@ func cull(paths []string, relative string) (culled []string) {
 	var r []string
 	for _, p := range paths {
 		if relative == Delimiter {
-			p = p[1:]
+			// Parameters in the top level of the hierarchy are not prefixed with
+			// Delimiter when returned from SSM API. Therefore we strip the first character
+			// except for root-level parameters
+			if string(p[0]) == Delimiter {
+				p = p[1:]
+			}
 		} else {
 			p = p[len(relative)+1:]
 		}
