@@ -40,7 +40,7 @@ func NewParameterStore() *ParameterStore {
 // SetCwd sets the current working dir within the parameter store
 func (ps *ParameterStore) SetCwd(path string) error {
 	path = fqp(path, ps.Cwd)
-	if parameterPathExists(path) {
+	if isPath(path) {
 		ps.Cwd = path
 	} else {
 		return errors.New("No such path ")
@@ -77,8 +77,8 @@ func (ps *ParameterStore) List(path string) (r []string, err error) {
 	return cull(r, path), nil
 }
 
-// Rm removes one or more parameters
-func (ps *ParameterStore) Rm(params []string) error {
+// Delete removes one or more parameters
+func (ps *ParameterStore) Delete(params []string) error {
 	var err error
 	ssmParams := &ssm.DeleteParametersInput{
 		Names: ps.inputPaths(params),
@@ -93,7 +93,7 @@ func (ps *ParameterStore) Rm(params []string) error {
 	return nil
 }
 
-// GetHistory gets the details of a slice of parameters
+// GetHistory returns the details and history of a parameter
 func (ps *ParameterStore) GetHistory(param string) (r []ssm.ParameterHistory, err error) {
 	history := &ssm.GetParameterHistoryInput{
 		Name:           aws.String(fqp(param, ps.Cwd)),
@@ -115,7 +115,7 @@ func (ps *ParameterStore) GetHistory(param string) (r []ssm.ParameterHistory, er
 	return r, nil
 }
 
-// Get retrieves parameters
+// Get retrieves one or more parameters
 func (ps *ParameterStore) Get(params []string) (r []ssm.Parameter, err error) {
 	ssmParams := &ssm.GetParametersInput{
 		Names:          ps.inputPaths(params),
@@ -140,9 +140,66 @@ func (ps *ParameterStore) Put(param *ssm.PutParameterInput) error {
 	return nil
 }
 
-// Cp copies a paramter from src to dest
+// Copy duplicates a parameter from src to dest
 func (ps *ParameterStore) Copy(src string, dest string) (err error) {
+	if !ps.Decrypt {
+		// Decryption required for copy
+		ps.Decrypt = true
+		defer func() {
+			ps.Decrypt = false
+		}()
+	}
+	src = fqp(src, ps.Cwd)
+	dest = fqp(dest, ps.Cwd)
+	if isParameter(src) {
+		return ps.copyParameter(src, dest)
+	} else if isPath(src) {
+		if ps.Recurse {
+			return ps.copyPath(src, dest)
+		}
+		return errors.New(src + " is a path")
+	}
+	return errors.New("Invalid source " + src)
+}
+
+func (ps *ParameterStore) copyPath(srcPath string, destPath string) (err error) {
+	params := &ssm.GetParametersByPathInput{
+		Path:      aws.String(srcPath),
+		Recursive: aws.Bool(true),
+	}
+	resp, err := ssmsvc.GetParametersByPath(params)
+	if err != nil {
+		return err
+	}
+	var srcName string
+	var destName string
+	for _, r := range resp.Parameters {
+		srcName = aws.StringValue(r.Name)
+		destName = strings.Join([]string{destPath, srcName[len(srcPath)+1:]}, Delimiter)
+		err = ps.copyParameter(srcName, destName)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func (ps *ParameterStore) copyParameter(src string, dest string) (err error) {
+	pHist, err := ps.GetHistory(src)
+	if err != nil {
+		return nil
+	}
+	pLatest := pHist[len(pHist)-1]
+	putParamInput := &ssm.PutParameterInput{
+		Name:           aws.String(dest),
+		Type:           pLatest.Type,
+		Value:          pLatest.Value,
+		KeyId:          pLatest.KeyId,
+		Description:    pLatest.Description,
+		AllowedPattern: pLatest.AllowedPattern,
+		Overwrite:      aws.Bool(true),
+	}
+	return ps.Put(putParamInput)
 }
 
 // inputPaths cleans a list of parameter paths and returns a slice suitable for ssm inputs
@@ -170,13 +227,29 @@ func fqp(path string, cwd string) string {
 	return filepath.Clean(dirtyPath)
 }
 
-// parameterPathExists checks for the existence of at least one key under path
-func parameterPathExists(path string) bool {
+// isParameter checks for the existence of a parameter
+func isParameter(param string) bool {
+	p := &ssm.GetParameterInput{
+		Name: aws.String(param),
+	}
+	_, err := ssmsvc.GetParameter(p)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+// isPath checks for the existence of at least one key under path
+func isPath(path string) bool {
+	var err error
 	params := &ssm.GetParametersByPathInput{
 		Path:      aws.String(path),
 		Recursive: aws.Bool(true),
 	}
-	resp, _ := ssmsvc.GetParametersByPath(params)
+	resp, err := ssmsvc.GetParametersByPath(params)
+	if err != nil {
+		return false
+	}
 	if len(resp.Parameters) > 0 {
 		return true
 	}
@@ -188,9 +261,9 @@ func cull(paths []string, relative string) (culled []string) {
 	var r []string
 	for _, p := range paths {
 		if relative == Delimiter {
-			// Parameters in the top level of the hierarchy are not prefixed with
-			// Delimiter when returned from SSM API. Therefore we strip the first character
-			// except for root-level parameters
+			// Parameters in the top level of the hierarchy are not prefixed with the delimiter
+			// when returned from SSM API. Therefore we strip the first character except
+			// for root-level parameters
 			if string(p[0]) == Delimiter {
 				p = p[1:]
 			}

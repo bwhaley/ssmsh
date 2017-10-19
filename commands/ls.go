@@ -18,10 +18,12 @@ func ls(c *ishell.Context) {
 	paths := c.Args
 	for i, p := range paths {
 		if p == "-R" {
-			ps.Recurse = true
-			defer func() {
-				ps.Recurse = false // recursive listing is per invocation
-			}()
+			if !ps.Recurse {
+				ps.Recurse = true
+				defer func() {
+					ps.Recurse = false // recursive listing is per invocation
+				}()
+			}
 			paths = remove(paths, i)
 		}
 	}
@@ -43,8 +45,4 @@ func ls(c *ishell.Context) {
 			shell.Println(r)
 		}
 	}
-}
-
-func remove(slice []string, s int) []string {
-	return append(slice[:s], slice[s+1:]...)
 }

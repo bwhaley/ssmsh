@@ -12,12 +12,10 @@ import (
 
 // TODO Inline syntax
 const putUsage string = `usage: put <newline>
-Create or update parameters. Enter one option per line, ending with a blank line.
-All fields except name, value,a nd type are optionalll fields except name
-and value are optional. 
-Example:
+Create or update parameters. Enter one option per line, ending with a blank line, or all
+options inline. All fields except name, value, and type are optional.
+Example of multiline put:
 />put
-Input options. End with a blank line.
 ... name=/foo/bar
 ... value=baz
 ... type=string

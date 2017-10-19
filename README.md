@@ -23,6 +23,18 @@ First, set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/develop
   mv          not yet implemented
   put          set parameter
   rm           remove parameters
+/> cd /foo
+/foo> ls
+bar
+baz
+/foo> get bar
+Parameter  Type               Value
+/foo/bar       SecureString    -
+/>decrypt
+Decrypt is true
+/>get bar
+Parameter  Type               Value
+/foo/bar      SecureString    baz
 ```
 
 ###  Inline commands
@@ -40,9 +52,10 @@ $ pssh -file commands.txt
 
 
 ## todo
+* [x] cp
 * [ ] tests
-* [ ] cp
 * [ ] mv
+* [ ] recursive delete
 * [ ] Read commands from a file
 * [ ] Flexible and improved output formats
 * [ ] Release via homebrew

@@ -15,7 +15,7 @@ Example:
 func rm(c *ishell.Context) {
 	var err error
 	if len(c.Args) >= 1 {
-		err = ps.Rm(c.Args)
+		err = ps.Delete(c.Args)
 		if err != nil {
 			shell.Println("Error: ", err)
 		}

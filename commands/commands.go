@@ -15,7 +15,7 @@ func Init(_shell *ishell.Shell, _ps *parameterstore.ParameterStore) {
 	shell = _shell
 	ps = _ps
 	registerCommand("cd", "change your relative location within the parameter store", cd, "")
-	registerCommand("cp", "not yet implemented", cp, "")
+	registerCommand("cp", "copy source to dest", cp, cpUsage)
 	registerCommand("decrypt", "toggle parameter decryption", decrypt, decryptUsage)
 	registerCommand("get", "get parameters", get, getUsage)
 	registerCommand("history", "toggle parameter history", history, historyUsage)
@@ -37,4 +37,8 @@ func registerCommand(name string, helpText string, f fn, usageText string) {
 
 func setPrompt(prompt string) {
 	shell.SetPrompt(prompt + ">")
+}
+
+func remove(slice []string, s int) []string {
+	return append(slice[:s], slice[s+1:]...)
 }
