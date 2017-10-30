@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 )
 
 // Delimiter is the parameter path separator character
@@ -21,26 +22,24 @@ type ParameterStore struct {
 	Key       string // The KMS key to use for SecureString parameters
 	Overwrite bool   // Overwrite parameters with Put, Move or Copy
 	Recurse   bool   // List parameters recursively
+	Client    ssmiface.SSMAPI
 }
 
-var ssmsvc *ssm.SSM
-
 // NewParameterStore initializes a ParameterStore with default values
-func NewParameterStore() *ParameterStore {
-	ps := new(ParameterStore)
+func (ps *ParameterStore) NewParameterStore() {
+	sess := session.Must(session.NewSession())
 	ps.Confirm = false
 	ps.Cwd = Delimiter
 	ps.Decrypt = false
 	ps.Overwrite = false
 	ps.Recurse = false
-	ssmsvc = ssm.New(session.New())
-	return ps
+	ps.Client = ssm.New(sess)
 }
 
 // SetCwd sets the current working dir within the parameter store
 func (ps *ParameterStore) SetCwd(path string) error {
 	path = fqp(path, ps.Cwd)
-	if isPath(path) {
+	if ps.isPath(path) {
 		ps.Cwd = path
 	} else {
 		return errors.New("No such path ")
@@ -49,17 +48,24 @@ func (ps *ParameterStore) SetCwd(path string) error {
 }
 
 // List displays the parameters in a given path
-// if recursive listing is requested, displays recursive listing of subdirectories in the provided path
-// if recursive is not enabled, behavior is similar to UNIX ls
+// Behavior is vaguely similar to UNIX ls
 func (ps *ParameterStore) List(path string) (r []string, err error) {
 	path = fqp(path, ps.Cwd)
+	param, err := ps.Get([]string{path})
+	if err != nil {
+		return nil, err
+	}
+	if len(param) == 1 {
+		r = append(r, aws.StringValue(param[0].Name))
+		return r, nil
+	}
 	params := &ssm.GetParametersByPathInput{
 		Path:           aws.String(path),
 		Recursive:      aws.Bool(true),
 		WithDecryption: aws.Bool(ps.Decrypt),
 	}
 	for {
-		resp, err := ssmsvc.GetParametersByPath(params)
+		resp, err := ps.Client.GetParametersByPath(params)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +89,7 @@ func (ps *ParameterStore) Delete(params []string) error {
 	ssmParams := &ssm.DeleteParametersInput{
 		Names: ps.inputPaths(params),
 	}
-	resp, err := ssmsvc.DeleteParameters(ssmParams)
+	resp, err := ps.Client.DeleteParameters(ssmParams)
 	if err != nil {
 		return err
 	}
@@ -100,7 +106,7 @@ func (ps *ParameterStore) GetHistory(param string) (r []ssm.ParameterHistory, er
 		WithDecryption: aws.Bool(ps.Decrypt),
 	}
 	for {
-		resp, err := ssmsvc.GetParameterHistory(history)
+		resp, err := ps.Client.GetParameterHistory(history)
 		if err != nil {
 			return nil, err
 		}
@@ -121,7 +127,7 @@ func (ps *ParameterStore) Get(params []string) (r []ssm.Parameter, err error) {
 		Names:          ps.inputPaths(params),
 		WithDecryption: aws.Bool(ps.Decrypt),
 	}
-	resp, err := ssmsvc.GetParameters(ssmParams)
+	resp, err := ps.Client.GetParameters(ssmParams)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +139,7 @@ func (ps *ParameterStore) Get(params []string) (r []ssm.Parameter, err error) {
 
 // Put creates or updates a parameter
 func (ps *ParameterStore) Put(param *ssm.PutParameterInput) error {
-	_, err := ssmsvc.PutParameter(param)
+	_, err := ps.Client.PutParameter(param)
 	if err != nil {
 		return err
 	}
@@ -151,9 +157,9 @@ func (ps *ParameterStore) Copy(src string, dest string) (err error) {
 	}
 	src = fqp(src, ps.Cwd)
 	dest = fqp(dest, ps.Cwd)
-	if isParameter(src) {
+	if ps.isParameter(src) {
 		return ps.copyParameter(src, dest)
-	} else if isPath(src) {
+	} else if ps.isPath(src) {
 		if ps.Recurse {
 			return ps.copyPath(src, dest)
 		}
@@ -167,7 +173,7 @@ func (ps *ParameterStore) copyPath(srcPath string, destPath string) (err error) 
 		Path:      aws.String(srcPath),
 		Recursive: aws.Bool(true),
 	}
-	resp, err := ssmsvc.GetParametersByPath(params)
+	resp, err := ps.Client.GetParametersByPath(params)
 	if err != nil {
 		return err
 	}
@@ -228,11 +234,11 @@ func fqp(path string, cwd string) string {
 }
 
 // isParameter checks for the existence of a parameter
-func isParameter(param string) bool {
+func (ps *ParameterStore) isParameter(param string) bool {
 	p := &ssm.GetParameterInput{
 		Name: aws.String(param),
 	}
-	_, err := ssmsvc.GetParameter(p)
+	_, err := ps.Client.GetParameter(p)
 	if err != nil {
 		return false
 	}
@@ -240,13 +246,13 @@ func isParameter(param string) bool {
 }
 
 // isPath checks for the existence of at least one key under path
-func isPath(path string) bool {
+func (ps *ParameterStore) isPath(path string) bool {
 	var err error
 	params := &ssm.GetParametersByPathInput{
 		Path:      aws.String(path),
 		Recursive: aws.Bool(true),
 	}
-	resp, err := ssmsvc.GetParametersByPath(params)
+	resp, err := ps.Client.GetParametersByPath(params)
 	if err != nil {
 		return false
 	}
@@ -256,7 +262,7 @@ func isPath(path string) bool {
 	return false
 }
 
-// cull removes all but the top level results (relative to Cwd) from a list of paths
+// cull removes all but the top level results (relative to a provided path) from a list of paths
 func cull(paths []string, relative string) (culled []string) {
 	var r []string
 	for _, p := range paths {

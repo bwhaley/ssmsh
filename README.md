@@ -1,5 +1,5 @@
 #
-pssh is an interactive shell for the AWS EC2 Parameter Store.
+pssh is an interactive shell for the EC2 Parameter Store.
 
 
 ## Installation
@@ -53,13 +53,13 @@ $ pssh -file commands.txt
 
 ## todo
 * [x] cp
+* [x] Read commands from a file
 * [ ] tests
 * [ ] mv
 * [ ] recursive delete
-* [ ] Read commands from a file
+* [ ] Improve README
 * [ ] Flexible and improved output formats
 * [ ] Release via homebrew
-* [ ] Improve README
 
 
 ## License

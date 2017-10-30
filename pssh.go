@@ -12,24 +12,25 @@ import (
 
 func main() {
 	shell := ishell.New()
-	ps := parameterstore.NewParameterStore()
-	commands.Init(shell, ps)
+	var ps parameterstore.ParameterStore
+	ps.NewParameterStore()
+	commands.Init(shell, &ps)
 
 	_fn := flag.String("file", "", "Read commands from file")
 	flag.Parse()
+
 	fn := *_fn
 	if fn != "" {
-		commandsFromFile(shell, fn)
+		processFromFile(shell, fn)
 	} else if len(flag.Args()) > 1 {
 		shell.Process(flag.Args()...)
 	} else {
-		shell.Println("Browse the EC2 Parameter Store")
 		shell.Run()
 	}
 	shell.Close()
 }
 
-func commandsFromFile(shell *ishell.Shell, fn string) {
+func processFromFile(shell *ishell.Shell, fn string) {
 	content, err := ioutil.ReadFile(fn)
 	if err != nil {
 		shell.Println("Error reading from file.", err)

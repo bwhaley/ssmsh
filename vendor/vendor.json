@@ -9,6 +9,12 @@
 			"revisionTime": "2017-10-03T16:18:03Z"
 		},
 		{
+			"checksumSHA1": "SmsXaJeJhOwugTiJGui8uRpAmhA=",
+			"path": "github.com/aws/aws-sdk-go",
+			"revision": "c540f71042296fdb368ba8b52eba5d086c413514",
+			"revisionTime": "2017-10-20T17:46:14Z"
+		},
+		{
 			"checksumSHA1": "97QZ6rN7/Vzu73vL9ur7jTpPaeo=",
 			"path": "github.com/aws/aws-sdk-go/aws",
 			"revision": "a28db88bdcd87b7023011ebc987b155d6d52411b",
@@ -157,6 +163,12 @@
 			"path": "github.com/aws/aws-sdk-go/service/ssm",
 			"revision": "a28db88bdcd87b7023011ebc987b155d6d52411b",
 			"revisionTime": "2017-10-17T21:13:06Z"
+		},
+		{
+			"checksumSHA1": "cAxlijULuvw8KAphHrR1+u3+AM0=",
+			"path": "github.com/aws/aws-sdk-go/service/ssm/ssmiface",
+			"revision": "c540f71042296fdb368ba8b52eba5d086c413514",
+			"revisionTime": "2017-10-20T17:46:14Z"
 		},
 		{
 			"checksumSHA1": "MerduaV3PxtZAWvOGpgoBIglo38=",
