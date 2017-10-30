@@ -71,3 +71,18 @@ Library | Use
 ------- | -----
 [abiosoft/ishell](https://github.com/abiosoft/ishell) | The interactive shell for golang
 [aws-sdk-go](https://github.com/aws/aws-sdk-go) | The AWS SDK for Go
+
+
+
+## Refactoring status
+
+Add Parameter
+pssh put --name /di/test/VALUE_2 --value hoho -d test description -k alias/aws/ssm  -t SecureString
+
+Get Parameter
+pssh get /di/test/VALUE_2 -d
+
+➜  pssh git:(refactoring_experiment) ✗ ./pssh get /di/test/VALUE_2 -d
+|    PARAMETER     |     TYPE     | VALUE |
+|------------------|--------------|-------|
+| /di/test/VALUE_2 | SecureString | hoho  |

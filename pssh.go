@@ -10,7 +10,7 @@ import (
 	"github.com/kountable/pssh/parameterstore"
 )
 
-func main() {
+func main1() {
 	shell := ishell.New()
 	ps := parameterstore.NewParameterStore()
 	commands.Init(shell, ps)
