@@ -115,31 +115,6 @@ func (ps *ParameterStore) GetHistory(param string) (r []ssm.ParameterHistory, er
 	return r, nil
 }
 
-// Get retrieves one or more parameters
-func (ps *ParameterStore) Get(params []string) (r []ssm.Parameter, err error) {
-	ssmParams := &ssm.GetParametersInput{
-		Names:          ps.inputPaths(params),
-		WithDecryption: aws.Bool(ps.Decrypt),
-	}
-	resp, err := ssmsvc.GetParameters(ssmParams)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range resp.Parameters {
-		r = append(r, *p)
-	}
-	return r, nil
-}
-
-// Put creates or updates a parameter
-func (ps *ParameterStore) Put(param *ssm.PutParameterInput) error {
-	_, err := ssmsvc.PutParameter(param)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // Copy duplicates a parameter from src to dest
 func (ps *ParameterStore) Copy(src string, dest string) (err error) {
 	if !ps.Decrypt {
@@ -199,7 +174,7 @@ func (ps *ParameterStore) copyParameter(src string, dest string) (err error) {
 		AllowedPattern: pLatest.AllowedPattern,
 		Overwrite:      aws.Bool(true),
 	}
-	return ps.Put(putParamInput)
+	return ps.PutParameter(putParamInput)
 }
 
 // inputPaths cleans a list of parameter paths and returns a slice suitable for ssm inputs

@@ -49,7 +49,7 @@ func put(c *ishell.Context) {
 		shell.Println("Error: name, type and value are required.")
 		return
 	}
-	err = ps.Put(&putParamInput)
+	err = ps.PutParameter(&putParamInput)
 	if err != nil {
 		shell.Println("Error: ", err)
 	}

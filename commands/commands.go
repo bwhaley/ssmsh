@@ -17,7 +17,7 @@ func Init(_shell *ishell.Shell, _ps *parameterstore.ParameterStore) {
 	registerCommand("cd", "change your relative location within the parameter store", cd, "")
 	registerCommand("cp", "copy source to dest", cp, cpUsage)
 	registerCommand("decrypt", "toggle parameter decryption", decrypt, decryptUsage)
-	registerCommand("get", "get parameters", get, getUsage)
+	// registerCommand("get", "get parameters", get, getUsage)
 	registerCommand("history", "toggle parameter history", history, historyUsage)
 	registerCommand("ls", "list parameters", ls, "")
 	registerCommand("mv", "not yet implemented", mv, "")
