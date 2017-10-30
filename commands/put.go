@@ -78,18 +78,17 @@ func inlinePut(options []string) bool {
 }
 
 func putOptions(s string) bool {
-	//var err error
 	if s == "" {
 		return false
 	}
 	paramOption := strings.Split(s, "=")
-	if len(paramOption) != 2 {
+	if len(paramOption) < 2 {
 		shell.Println("Invalid input.")
 		shell.Println(putUsage)
 		return false
 	}
 	field := strings.ToLower(paramOption[0])
-	val := paramOption[1]
+	val := strings.Join(paramOption[1:], "=")
 	if validate(field, val) {
 		return true
 	}
