@@ -9,7 +9,7 @@ usage: cd path
 Change your working directory within the parameter store.
 Example:
 />cd /foo
-/foo> 
+/foo>
 `
 
 func cd(c *ishell.Context) {
@@ -20,7 +20,7 @@ func cd(c *ishell.Context) {
 		path := c.Args[0]
 		err = ps.SetCwd(path)
 		if err != nil {
-			shell.Println("Error: ", err)
+			shell.Println("Error:", err)
 		} else {
 			setPrompt(ps.Cwd)
 		}

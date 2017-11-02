@@ -60,6 +60,7 @@ $ pssh -file commands.txt
 * [ ] Improve README
 * [ ] Flexible and improved output formats
 * [ ] Release via homebrew
+* [ ] Copy between accounts using profiles
 
 
 ## License

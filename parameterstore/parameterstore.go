@@ -38,6 +38,10 @@ func (ps *ParameterStore) NewParameterStore() {
 
 // SetCwd sets the current working dir within the parameter store
 func (ps *ParameterStore) SetCwd(path string) error {
+	if path == Delimiter {
+		ps.Cwd = path
+		return nil
+	}
 	path = fqp(path, ps.Cwd)
 	if ps.isPath(path) {
 		ps.Cwd = path
@@ -93,8 +97,12 @@ func (ps *ParameterStore) Delete(params []string) error {
 	if err != nil {
 		return err
 	}
+	var invalidParams []string
 	for _, r := range resp.InvalidParameters {
-		return errors.New("Could not delete invalid parameter " + aws.StringValue(r))
+		invalidParams = append(invalidParams, aws.StringValue(r))
+	}
+	if len(invalidParams) > 0 {
+		return errors.New("Could not delete invalid parameters " + strings.Join(invalidParams, ","))
 	}
 	return nil
 }
@@ -191,6 +199,9 @@ func (ps *ParameterStore) copyPath(srcPath string, destPath string) (err error) 
 }
 
 func (ps *ParameterStore) copyParameter(src string, dest string) (err error) {
+	if !ps.isParameter(src) {
+		return errors.New("source must be a parameter")
+	}
 	pHist, err := ps.GetHistory(src)
 	if err != nil {
 		return nil

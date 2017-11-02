@@ -13,7 +13,6 @@ GOVERSION := $(shell go version | grep 1.9)
 ifeq "$(GOVERSION)" ""
     $(error must be running Go version 1.9)
 endif
-export GO15VENDOREXPERIMENT=1
 
 all: test build
 
@@ -25,26 +24,26 @@ GOLINT := $(GOPATH)/bin/golint
 $(GOLINT):
 	go get github.com/golang/lint/golint
 
-GOVENDOR := $(GOPATH)/bin/govendor
-$(GOVENDOR):
-	go get -u github.com/kardianos/govendor
+DEP := $(GOPATH)/bin/dep
+$(DEP):
+	go get -u github.com/golang/dep
 
 GO_LDFLAGS := -X $(shell go list ./$(PACKAGE)).GitCommit=$(GIT_COMMIT)
 
 test: $(PKGS)
 
-$(PKGS): $(GOLINT) $(FGT)
+$(PKGS): $(GOLINT)
 	@echo "FORMATTING"
-	@$(FGT) gofmt -l=true $(GOPATH)/src/$@/*.go
+	go fmt $@
 	@echo "LINTING"
-	@$(FGT) $(GOLINT) $(GOPATH)/src/$@/*.go
-	@echo "VETTING"
-	@go vet -v $@
+	golint $@
+	@echo "Vetting"
+	go vet -v $@
 	@echo "TESTING"
-	@go test -v $@
+	go test -v $@
 
-vendor: $(GOVENDOR)
-	$(GOVENDOR) add +external
+vendor: $(DEP)
+	$(DEP) ensure
 
 build:
 	go build -i -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE) $(PROJECT)
