@@ -50,11 +50,6 @@
   revision = "a5cdd64afdee435007ee3e9f6ed4684af949d568"
 
 [[projects]]
-  name = "github.com/ryanuber/columnize"
-  packages = ["."]
-  revision = "abc90934186a77966e2beeac62ed966aac0561d5"
-
-[[projects]]
   name = "golang.org/x/sys"
   packages = ["unix"]
   revision = "8dbc5d05d6edcc104950cc299a1ce6641235bc86"
@@ -62,6 +57,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a569a5e91ad54181ec6f075067a6d5a09ba9c65b55026af4e8999a84e5e686b8"
+  inputs-digest = "940ca7fd553e2eaeb1b6b633a736758cfef60ba3cc9294b63304045d29ca6eaf"
   solver-name = "gps-cdcl"
   solver-version = 1
