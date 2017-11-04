@@ -2,14 +2,15 @@ package commands
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/abiosoft/ishell"
 )
 
 const lsUsage string = `
-ls [-r] path ...
+ls [-r|R] path ...
 Print the parameters in one or more paths.
--r List parameters recursively
+-[r|R] List parameters recursively
 `
 
 func ls(c *ishell.Context) {
@@ -17,7 +18,7 @@ func ls(c *ishell.Context) {
 	var pathList []string
 	paths := c.Args
 	for i, p := range paths {
-		if p == "-R" {
+		if strings.EqualFold(p, "-r") {
 			if !ps.Recurse {
 				ps.Recurse = true
 				defer func() {
@@ -42,7 +43,7 @@ func ls(c *ishell.Context) {
 		}
 		sort.Strings(pathList)
 		for _, r := range pathList {
-			shell.Println(r)
+			shell.Printf("%+s\n", r)
 		}
 	}
 }

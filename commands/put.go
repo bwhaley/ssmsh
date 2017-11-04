@@ -14,12 +14,14 @@ import (
 const putUsage string = `usage: put <newline>
 Create or update parameters. Enter one option per line, ending with a blank line, or all
 options inline. All fields except name, value, and type are optional.
+Example of inline put:
+/> put name=/House/Targaryen/Daenerys value="Queen" type="String" description="Mother of dragons"
 Example of multiline put:
 />put
-... name=/foo/bar
-... value=baz
-... type=string
-... description=foobar
+... name=/House/Lannister/Cersei
+... value="Queen"
+... type="String"
+... description="Queen of the Seven Kingdoms"
 ... key=arn:aws:kms:us-west-2:012345678901:key/321ec4ec-ed00-427f-9729-748ba2254794
 ... overwrite=true
 ... pattern=[A-z]+
@@ -28,11 +30,10 @@ Example of multiline put:
 
 var putParamInput ssm.PutParameterInput
 
-var validTypes = []string{"String", "StringList", "SecureString"}
-
 // Add or update parameters
 func put(c *ishell.Context) {
 	var err error
+	var resp *ssm.PutParameterOutput
 	putParamInput = ssm.PutParameterInput{}
 	var r bool
 	if len(c.Args) == 0 {
@@ -49,9 +50,14 @@ func put(c *ishell.Context) {
 		shell.Println("Error: name, type and value are required.")
 		return
 	}
-	err = ps.Put(&putParamInput)
+	resp, err = ps.Put(&putParamInput)
 	if err != nil {
 		shell.Println("Error: ", err)
+	} else {
+		version := strconv.Itoa(int(aws.Int64Value(resp.Version)))
+		if version != "" {
+			shell.Println("Put version " + version)
+		}
 	}
 }
 
@@ -117,6 +123,7 @@ func validate(f string, v string) bool {
 }
 
 func validateType(s string) bool {
+	validTypes := []string{"String", "StringList", "SecureString"}
 	for i := 0; i < len(validTypes); i++ {
 		if strings.EqualFold(s, validTypes[i]) {
 			putParamInput.Type = aws.String(validTypes[i])

@@ -46,7 +46,7 @@ func (ps *ParameterStore) SetCwd(path string) error {
 	if ps.isPath(path) {
 		ps.Cwd = path
 	} else {
-		return errors.New("No such path ")
+		return errors.New("No such path")
 	}
 	return nil
 }
@@ -54,14 +54,14 @@ func (ps *ParameterStore) SetCwd(path string) error {
 // List displays the parameters in a given path
 // Behavior is vaguely similar to UNIX ls
 func (ps *ParameterStore) List(path string) (r []string, err error) {
+	var pathParam string
 	path = fqp(path, ps.Cwd)
 	param, err := ps.Get([]string{path})
 	if err != nil {
 		return nil, err
 	}
 	if len(param) == 1 {
-		r = append(r, aws.StringValue(param[0].Name))
-		return r, nil
+		pathParam = aws.StringValue(param[0].Name)
 	}
 	params := &ssm.GetParametersByPathInput{
 		Path:           aws.String(path),
@@ -81,10 +81,13 @@ func (ps *ParameterStore) List(path string) (r []string, err error) {
 		}
 		params.NextToken = resp.NextToken
 	}
-	if ps.Recurse {
-		return r, nil
+	if !ps.Recurse {
+		r = cull(r, path)
 	}
-	return cull(r, path), nil
+	if pathParam != "" {
+		r = append(r, pathParam)
+	}
+	return r, nil
 }
 
 // Delete removes one or more parameters
@@ -146,16 +149,16 @@ func (ps *ParameterStore) Get(params []string) (r []ssm.Parameter, err error) {
 }
 
 // Put creates or updates a parameter
-func (ps *ParameterStore) Put(param *ssm.PutParameterInput) error {
-	_, err := ps.Client.PutParameter(param)
+func (ps *ParameterStore) Put(param *ssm.PutParameterInput) (resp *ssm.PutParameterOutput, err error) {
+	resp, err = ps.Client.PutParameter(param)
 	if err != nil {
-		return err
+		return resp, err
 	}
-	return nil
+	return resp, nil
 }
 
 // Copy duplicates a parameter from src to dest
-func (ps *ParameterStore) Copy(src string, dest string) (err error) {
+func (ps *ParameterStore) Copy(src string, dest string) error {
 	if !ps.Decrypt {
 		// Decryption required for copy
 		ps.Decrypt = true
@@ -176,18 +179,18 @@ func (ps *ParameterStore) Copy(src string, dest string) (err error) {
 	return errors.New("Invalid source " + src)
 }
 
-func (ps *ParameterStore) copyPath(srcPath string, destPath string) (err error) {
+func (ps *ParameterStore) copyPath(srcPath string, destPath string) error {
 	params := &ssm.GetParametersByPathInput{
 		Path:      aws.String(srcPath),
 		Recursive: aws.Bool(true),
 	}
-	resp, err := ps.Client.GetParametersByPath(params)
+	getResp, err := ps.Client.GetParametersByPath(params)
 	if err != nil {
 		return err
 	}
 	var srcName string
 	var destName string
-	for _, r := range resp.Parameters {
+	for _, r := range getResp.Parameters {
 		srcName = aws.StringValue(r.Name)
 		destName = strings.Join([]string{destPath, srcName[len(srcPath)+1:]}, Delimiter)
 		err = ps.copyParameter(srcName, destName)
@@ -198,13 +201,13 @@ func (ps *ParameterStore) copyPath(srcPath string, destPath string) (err error) 
 	return nil
 }
 
-func (ps *ParameterStore) copyParameter(src string, dest string) (err error) {
+func (ps *ParameterStore) copyParameter(src string, dest string) error {
 	if !ps.isParameter(src) {
 		return errors.New("source must be a parameter")
 	}
 	pHist, err := ps.GetHistory(src)
 	if err != nil {
-		return nil
+		return err
 	}
 	pLatest := pHist[len(pHist)-1]
 	putParamInput := &ssm.PutParameterInput{
@@ -216,10 +219,15 @@ func (ps *ParameterStore) copyParameter(src string, dest string) (err error) {
 		AllowedPattern: pLatest.AllowedPattern,
 		Overwrite:      aws.Bool(true),
 	}
-	return ps.Put(putParamInput)
+	_, err = ps.Put(putParamInput)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-// inputPaths cleans a list of parameter paths and returns a slice suitable for ssm inputs
+// inputPaths cleans a list of parameter paths and returns strings
+// suitable for use as ssm.Parameters
 func (ps *ParameterStore) inputPaths(paths []string) []*string {
 	var _paths []*string
 	for i, p := range paths {
@@ -229,9 +237,9 @@ func (ps *ParameterStore) inputPaths(paths []string) []*string {
 	return _paths
 }
 
-// TODO Support regex
 // fqp cleans a provided path
 // relative paths are prefixed with cwd
+// TODO Support regex or globbing
 func fqp(path string, cwd string) string {
 	var dirtyPath string
 	if strings.HasPrefix(path, Delimiter) {

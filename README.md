@@ -54,7 +54,7 @@ $ pssh -file commands.txt
 ## todo
 * [x] cp
 * [x] Read commands from a file
-* [ ] tests
+* [x] tests
 * [ ] mv
 * [ ] recursive delete
 * [ ] Improve README

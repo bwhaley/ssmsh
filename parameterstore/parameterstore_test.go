@@ -1,6 +1,7 @@
 package parameterstore_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -14,10 +15,11 @@ type mockedSSM struct {
 	ssmiface.SSMAPI
 	GetParametersByPathResp ssm.GetParametersByPathOutput
 	GetParametersByPathNext ssm.GetParametersByPathOutput
-	GetParameterResp        ssm.GetParameterOutput
 	GetParameterHistoryResp ssm.GetParameterHistoryOutput
 	GetParametersResp       ssm.GetParametersOutput
+	GetParameterResp        []ssm.GetParameterOutput
 	DeleteParametersResp    ssm.DeleteParametersOutput
+	PutParameterResp        ssm.PutParameterOutput
 }
 
 func (m mockedSSM) GetParametersByPath(in *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error) {
@@ -32,7 +34,13 @@ func (m mockedSSM) DeleteParameters(in *ssm.DeleteParametersInput) (*ssm.DeleteP
 }
 
 func (m mockedSSM) GetParameter(in *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
-	return &m.GetParameterResp, nil
+	parameterName := aws.StringValue(in.Name)
+	for _, param := range m.GetParameterResp {
+		if aws.StringValue(param.Parameter.Name) == parameterName {
+			return &param, nil
+		}
+	}
+	return nil, errors.New("Parameter not found")
 }
 
 func (m mockedSSM) GetParameterHistory(in *ssm.GetParameterHistoryInput) (*ssm.GetParameterHistoryOutput, error) {
@@ -40,7 +48,107 @@ func (m mockedSSM) GetParameterHistory(in *ssm.GetParameterHistoryInput) (*ssm.G
 }
 
 func (m mockedSSM) GetParameters(in *ssm.GetParametersInput) (*ssm.GetParametersOutput, error) {
+	for _, n := range in.Names {
+		input := &ssm.GetParameterInput{
+			Name:           n,
+			WithDecryption: aws.Bool(true),
+		}
+		parameter, err := m.GetParameter(input)
+		if err != nil {
+			m.GetParametersResp.InvalidParameters = append(m.GetParametersResp.InvalidParameters, n)
+		} else {
+			m.GetParametersResp.Parameters = append(m.GetParametersResp.Parameters, parameter.Parameter)
+		}
+	}
 	return &m.GetParametersResp, nil
+}
+
+func (m mockedSSM) PutParameter(in *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
+	return &m.PutParameterResp, nil
+}
+
+func TestPut(t *testing.T) {
+	var expectedVersion int64 = 1
+	var p parameterstore.ParameterStore
+	p.NewParameterStore()
+	p.Cwd = parameterstore.Delimiter
+	p.Client = mockedSSM{
+		PutParameterResp: ssm.PutParameterOutput{
+			Version: aws.Int64(expectedVersion),
+		},
+	}
+	putParameterInput := ssm.PutParameterInput{
+		Name:        aws.String("/Houses/Stark/EddardStark"),
+		Value:       aws.String("Lord"),
+		Description: aws.String("Lord of Winterfell in Season 1"),
+		Type:        aws.String("String"),
+	}
+	resp, err := p.Put(&putParameterInput)
+	if err != nil {
+		t.Fatal("Error putting parameter", err)
+	} else {
+		if aws.Int64Value(resp.Version) != expectedVersion {
+			msg := fmt.Errorf("expected %d, got %d", expectedVersion, aws.Int64Value(resp.Version))
+			t.Fatal(msg)
+		}
+	}
+}
+
+func TestCopyParameter(t *testing.T) {
+	srcParam := "/Houses/Stark/JonSnow"
+	dstParam := "/Houses/Targaryen/JonSnow"
+	var p parameterstore.ParameterStore
+	p.NewParameterStore()
+	p.Cwd = parameterstore.Delimiter
+	p.Client = mockedSSM{
+		GetParameterResp: []ssm.GetParameterOutput{
+			{
+				Parameter: &ssm.Parameter{
+					Name:  aws.String("/Houses/Stark/JonSnow"),
+					Type:  aws.String("String"),
+					Value: aws.String("King"),
+				},
+			},
+			{
+				Parameter: &ssm.Parameter{
+					Name:  aws.String("/Houses/Targaryen/JonSnow"),
+					Type:  aws.String("String"),
+					Value: aws.String("King"),
+				},
+			},
+		},
+		GetParameterHistoryResp: ssm.GetParameterHistoryOutput{
+			Parameters: []*ssm.ParameterHistory{
+				{
+					Name:        aws.String("/Houses/Stark/JonSnow"),
+					Value:       aws.String("King"),
+					Type:        aws.String("String"),
+					Description: aws.String("King of the north"),
+					Version:     aws.Int64(2),
+				},
+				{
+					Name:        aws.String("/Houses/Stark/JonSnow"),
+					Value:       aws.String("Bastard"),
+					Type:        aws.String("String"),
+					Description: aws.String("Bastard of Winterfell"),
+					Version:     aws.Int64(1),
+				},
+			},
+		},
+	}
+	err := p.Copy(srcParam, dstParam)
+	if err != nil {
+		t.Fatal("Error copying parameter", err)
+	}
+	resp, err := p.Get([]string{dstParam})
+	if err != nil {
+		t.Fatal("Error getting parameter", err)
+	}
+	expectedName := "/Houses/Targaryen/JonSnow"
+	if aws.StringValue(resp[0].Name) != expectedName {
+		msg := fmt.Errorf("expected %s, got %s", expectedName, aws.StringValue(resp[0].Name))
+		t.Fatal(msg)
+	}
 }
 
 func TestCwd(t *testing.T) {
@@ -166,14 +274,8 @@ func TestList(t *testing.T) {
 			Query:   "/dev/db/username",
 			Recurse: false,
 			GetParametersByPathResp: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("/dev/db/username"),
-						Type:  aws.String("String"),
-						Value: aws.String("someusername"),
-					},
-				},
-				NextToken: aws.String(""),
+				Parameters: []*ssm.Parameter{},
+				NextToken:  aws.String(""),
 			},
 			Expected: []string{
 				"/dev/db/username",
@@ -190,16 +292,6 @@ func TestList(t *testing.T) {
 		}, {
 			Query:   "/",
 			Recurse: false,
-			GetParametersByPathResp: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("root"),
-						Type:  aws.String("String"),
-						Value: aws.String("A root parameter"),
-					},
-				},
-				NextToken: aws.String(""),
-			},
 			Expected: []string{
 				"root",
 			},
@@ -243,7 +335,7 @@ func TestList(t *testing.T) {
 			},
 			GetParametersResp: ssm.GetParametersOutput{
 				InvalidParameters: []*string{
-					aws.String("/dev/db/name"),
+					aws.String("/dev/db"),
 					aws.String("String"),
 					aws.String("mydb"),
 				},
@@ -290,7 +382,7 @@ func TestList(t *testing.T) {
 			},
 			GetParametersResp: ssm.GetParametersOutput{
 				InvalidParameters: []*string{
-					aws.String("/dev/db/name"),
+					aws.String("/dev/db"),
 					aws.String("String"),
 					aws.String("mydb"),
 				},
@@ -337,7 +429,7 @@ func TestList(t *testing.T) {
 			},
 			GetParametersResp: ssm.GetParametersOutput{
 				InvalidParameters: []*string{
-					aws.String("/dev/db/name"),
+					aws.String("/dev/db"),
 					aws.String("String"),
 					aws.String("mydb"),
 				},
