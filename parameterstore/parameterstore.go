@@ -92,10 +92,11 @@ func (ps *ParameterStore) List(path string, recurse bool) (r []string, err error
 	return r, nil
 }
 
-// Delete removes one or more parameters
+// Remove removes one or more parameters
 func (ps *ParameterStore) Remove(params []string, recurse bool) (err error) {
 	var parametersToDelete []string
 	for _, p := range params {
+		p = fqp(p, ps.Cwd)
 		if ps.isParameter(p) {
 			parametersToDelete = append(parametersToDelete, p)
 		} else if ps.isPath(p) {
@@ -118,16 +119,16 @@ func (ps *ParameterStore) Remove(params []string, recurse bool) (err error) {
 					additionalParams.NextToken = resp.NextToken
 				}
 			} else {
-				return fmt.Errorf("Tried to delete path %s but recursive not requested.", p)
+				return fmt.Errorf("tried to delete path %s but recursive not requested", p)
 			}
 		} else {
 			return fmt.Errorf("No path or parameter %s was found, aborting", p)
 		}
 	}
-	return ps.Delete(parametersToDelete)
+	return ps.delete(parametersToDelete)
 }
 
-func (ps *ParameterStore) Delete(params []string) (err error) {
+func (ps *ParameterStore) delete(params []string) (err error) {
 	const maxParams = 10
 	var invalidParams []string
 	var arrayEnd int
@@ -206,13 +207,6 @@ func (ps *ParameterStore) Put(param *ssm.PutParameterInput) (resp *ssm.PutParame
 // Move moves a parameter or path to another location
 func (ps *ParameterStore) Move(src string, dst string) error {
 	var err error
-	if !ps.Decrypt {
-		// Decryption required for copy
-		ps.Decrypt = true
-		defer func() {
-			ps.Decrypt = false
-		}()
-	}
 	err = ps.Copy(src, dst, true)
 	if err != nil {
 		return err
@@ -226,6 +220,7 @@ func (ps *ParameterStore) Move(src string, dst string) error {
 
 // Copy duplicates a parameter from src to dst
 func (ps *ParameterStore) Copy(src string, dst string, recurse bool) error {
+	var srcIsParameter, dstIsParameter, srcIsPath, dstIsPath bool
 	if !ps.Decrypt {
 		// Decryption required for copy
 		ps.Decrypt = true
@@ -233,47 +228,35 @@ func (ps *ParameterStore) Copy(src string, dst string, recurse bool) error {
 			ps.Decrypt = false
 		}()
 	}
-	src = fqp(src, ps.Cwd)
-	dst = fqp(dst, ps.Cwd)
-	if ps.isParameter(src) {
-		if ps.isPath(dst) {
-			_dst := strings.Split(src, Delimiter)
-			dst = dst + Delimiter + _dst[len(_dst)-1]
-			fmt.Println(dst)
-		}
+	srcIsParameter = ps.isParameter(fqp(src, ps.Cwd))
+	if !srcIsParameter {
+		srcIsPath = ps.isPath(fqp(src, ps.Cwd))
+	}
+	dstIsParameter = ps.isParameter(fqp(dst, ps.Cwd))
+	if !dstIsParameter {
+		dstIsPath = ps.isPath(fqp(dst, ps.Cwd))
+	}
+	if srcIsParameter && !dstIsParameter && !dstIsPath {
 		return ps.copyParameter(src, dst)
-	} else if ps.isPath(src) {
+	} else if srcIsParameter && dstIsParameter {
+		return ps.copyParameter(src, dst)
+	} else if srcIsPath && dstIsParameter {
+		return fmt.Errorf("%s is a path (not copied)", src)
+	} else if srcIsParameter && dstIsPath {
+		return ps.copyParameterToPath(src, dst)
+	} else if srcIsPath && dstIsPath {
 		if recurse {
-			return ps.copyPath(src, dst)
+			return ps.copyPathToPath(src, dst)
 		}
-		return errors.New(src + " is a path")
+		return fmt.Errorf("%s and %s are both paths but recursion not requested. Use -R", src, dst)
 	}
-	return errors.New("Invalid source " + src)
-}
+	return fmt.Errorf("%s or %s is not a path or parameter", src, dst)
 
-func (ps *ParameterStore) copyPath(srcPath string, dstPath string) error {
-	params := &ssm.GetParametersByPathInput{
-		Path:      aws.String(srcPath),
-		Recursive: aws.Bool(true),
-	}
-	getResp, err := ps.Client.GetParametersByPath(params)
-	if err != nil {
-		return err
-	}
-	var srcName string
-	var dstName string
-	for _, r := range getResp.Parameters {
-		srcName = aws.StringValue(r.Name)
-		dstName = strings.Join([]string{dstPath, srcName[len(srcPath)+1:]}, Delimiter)
-		err = ps.copyParameter(srcName, dstName)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (ps *ParameterStore) copyParameter(src string, dst string) error {
+	src = fqp(src, ps.Cwd)
+	dst = fqp(dst, ps.Cwd)
 	if !ps.isParameter(src) {
 		return errors.New("source must be a parameter")
 	}
@@ -294,6 +277,44 @@ func (ps *ParameterStore) copyParameter(src string, dst string) error {
 	_, err = ps.Put(putParamInput)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (ps *ParameterStore) copyParameterToPath(srcParam string, dstPath string) error {
+	srcParam = fqp(srcParam, ps.Cwd)
+	srcParamElements := strings.Split(srcParam, Delimiter)
+	dstParam := fqp(dstPath, ps.Cwd) + Delimiter + srcParamElements[len(srcParamElements)-1]
+	return ps.copyParameter(srcParam, dstParam)
+}
+
+func (ps *ParameterStore) copyPathToPath(srcPath string, dstPath string) error {
+	srcPath = fqp(srcPath, ps.Cwd)
+	params := &ssm.GetParametersByPathInput{
+		Path:      aws.String(srcPath),
+		Recursive: aws.Bool(true),
+	}
+	getResp, err := ps.Client.GetParametersByPath(params)
+	if err != nil {
+		return err
+	}
+
+	var srcParam string
+	var dstParam string
+	for _, r := range getResp.Parameters {
+		pathElements := strings.Split(srcPath, Delimiter)
+		dstPathRoot := pathElements[len(pathElements)-1]
+		srcParam = aws.StringValue(r.Name)
+		srcParamShortName := srcParam[len(srcPath)+1:]
+		dstParam = strings.Join([]string{
+			fqp(dstPath, ps.Cwd),
+			dstPathRoot,
+			srcParamShortName,
+		}, Delimiter)
+		err = ps.copyParameter(srcParam, dstParam)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
