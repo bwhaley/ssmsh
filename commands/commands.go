@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"strings"
+
 	"github.com/abiosoft/ishell"
 	"github.com/kountable/pssh/parameterstore"
 )
@@ -14,13 +16,13 @@ var ps *parameterstore.ParameterStore
 func Init(_shell *ishell.Shell, _ps *parameterstore.ParameterStore) {
 	shell = _shell
 	ps = _ps
-	registerCommand("cd", "change your relative location within the parameter store", cd, "")
+	registerCommand("cd", "change your relative location within the parameter store", cd, cdUsage)
 	registerCommand("cp", "copy source to dest", cp, cpUsage)
 	registerCommand("decrypt", "toggle parameter decryption", decrypt, decryptUsage)
 	registerCommand("get", "get parameters", get, getUsage)
-	registerCommand("history", "toggle parameter history", history, historyUsage)
-	registerCommand("ls", "list parameters", ls, "")
-	registerCommand("mv", "not yet implemented", mv, "")
+	registerCommand("history", "get parameter history", history, historyUsage)
+	registerCommand("ls", "list parameters", ls, lsUsage)
+	registerCommand("mv", "move parameters", mv, mvUsage)
 	registerCommand("put", "set parameter", put, putUsage)
 	registerCommand("rm", "remove parameters", rm, rmUsage)
 	setPrompt(parameterstore.Delimiter)
@@ -39,6 +41,16 @@ func setPrompt(prompt string) {
 	shell.SetPrompt(prompt + ">")
 }
 
-func remove(slice []string, s int) []string {
-	return append(slice[:s], slice[s+1:]...)
+func remove(slice []string, i int) []string {
+	return append(slice[:i], slice[i+1:]...)
+}
+
+func checkRecursion(paths []string) ([]string, bool) {
+	for i, p := range paths {
+		if strings.EqualFold(p, "-r") {
+			paths = remove(paths, i)
+			return paths, true
+		}
+	}
+	return paths, false
 }

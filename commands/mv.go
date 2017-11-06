@@ -10,6 +10,8 @@ Move parameter from src to dst.
 `
 
 func mv(c *ishell.Context) {
-	shell.Println("Not yet implemented")
-	return
+	err := ps.Move(c.Args[0], c.Args[1])
+	if err != nil {
+		shell.Println(err)
+	}
 }

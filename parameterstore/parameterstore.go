@@ -2,6 +2,7 @@ package parameterstore
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -16,24 +17,25 @@ const Delimiter = "/"
 
 // ParameterStore represents the current state and preferences of the shell
 type ParameterStore struct {
-	Confirm   bool   // TODO Prompt for confirmation to delete or overwrite
-	Cwd       string // The current working directory in the hierarchy
-	Decrypt   bool   // Decrypt values retrieved from Get
-	Key       string // The KMS key to use for SecureString parameters
-	Overwrite bool   // Overwrite parameters with Put, Move or Copy
-	Recurse   bool   // List parameters recursively
-	Client    ssmiface.SSMAPI
+	Confirm bool   // TODO Prompt for confirmation to delete or overwrite
+	Cwd     string // The current working directory in the hierarchy
+	Decrypt bool   // Decrypt values retrieved from Get
+	Key     string // The KMS key to use for SecureString parameters
+	Client  ssmiface.SSMAPI
 }
 
 // NewParameterStore initializes a ParameterStore with default values
-func (ps *ParameterStore) NewParameterStore() {
+func (ps *ParameterStore) NewParameterStore() error {
 	sess := session.Must(session.NewSession())
 	ps.Confirm = false
 	ps.Cwd = Delimiter
 	ps.Decrypt = false
-	ps.Overwrite = false
-	ps.Recurse = false
 	ps.Client = ssm.New(sess)
+	_, err := ps.List(Delimiter, false)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // SetCwd sets the current working dir within the parameter store
@@ -53,7 +55,7 @@ func (ps *ParameterStore) SetCwd(path string) error {
 
 // List displays the parameters in a given path
 // Behavior is vaguely similar to UNIX ls
-func (ps *ParameterStore) List(path string) (r []string, err error) {
+func (ps *ParameterStore) List(path string, recurse bool) (r []string, err error) {
 	var pathParam string
 	path = fqp(path, ps.Cwd)
 	param, err := ps.Get([]string{path})
@@ -81,7 +83,7 @@ func (ps *ParameterStore) List(path string) (r []string, err error) {
 		}
 		params.NextToken = resp.NextToken
 	}
-	if !ps.Recurse {
+	if !recurse {
 		r = cull(r, path)
 	}
 	if pathParam != "" {
@@ -91,18 +93,62 @@ func (ps *ParameterStore) List(path string) (r []string, err error) {
 }
 
 // Delete removes one or more parameters
-func (ps *ParameterStore) Delete(params []string) error {
-	var err error
-	ssmParams := &ssm.DeleteParametersInput{
-		Names: ps.inputPaths(params),
+func (ps *ParameterStore) Remove(params []string, recurse bool) (err error) {
+	var parametersToDelete []string
+	for _, p := range params {
+		if ps.isParameter(p) {
+			parametersToDelete = append(parametersToDelete, p)
+		} else if ps.isPath(p) {
+			if recurse {
+				additionalParams := &ssm.GetParametersByPathInput{
+					Path:      aws.String(p),
+					Recursive: aws.Bool(true),
+				}
+				for {
+					resp, err := ps.Client.GetParametersByPath(additionalParams)
+					if err != nil {
+						return err
+					}
+					for _, r := range resp.Parameters {
+						parametersToDelete = append(parametersToDelete, aws.StringValue(r.Name))
+					}
+					if aws.StringValue(resp.NextToken) == "" {
+						break
+					}
+					additionalParams.NextToken = resp.NextToken
+				}
+			} else {
+				return fmt.Errorf("Tried to delete path %s but recursive not requested.", p)
+			}
+		} else {
+			return fmt.Errorf("No path or parameter %s was found, aborting", p)
+		}
 	}
-	resp, err := ps.Client.DeleteParameters(ssmParams)
-	if err != nil {
-		return err
-	}
+	return ps.Delete(parametersToDelete)
+}
+
+func (ps *ParameterStore) Delete(params []string) (err error) {
+	const maxParams = 10
 	var invalidParams []string
-	for _, r := range resp.InvalidParameters {
-		invalidParams = append(invalidParams, aws.StringValue(r))
+	var arrayEnd int
+	var deleteBatch []string
+	for i := 0; i < len(params); i += maxParams {
+		if len(params)-i < maxParams {
+			arrayEnd = len(params)
+		} else {
+			arrayEnd = i + maxParams
+		}
+		deleteBatch = params[i:arrayEnd]
+		ssmParams := &ssm.DeleteParametersInput{
+			Names: ps.inputPaths(deleteBatch),
+		}
+		resp, err := ps.Client.DeleteParameters(ssmParams)
+		if err != nil {
+			return err
+		}
+		for _, r := range resp.InvalidParameters {
+			invalidParams = append(invalidParams, aws.StringValue(r))
+		}
 	}
 	if len(invalidParams) > 0 {
 		return errors.New("Could not delete invalid parameters " + strings.Join(invalidParams, ","))
@@ -157,8 +203,29 @@ func (ps *ParameterStore) Put(param *ssm.PutParameterInput) (resp *ssm.PutParame
 	return resp, nil
 }
 
-// Copy duplicates a parameter from src to dest
-func (ps *ParameterStore) Copy(src string, dest string) error {
+// Move moves a parameter or path to another location
+func (ps *ParameterStore) Move(src string, dst string) error {
+	var err error
+	if !ps.Decrypt {
+		// Decryption required for copy
+		ps.Decrypt = true
+		defer func() {
+			ps.Decrypt = false
+		}()
+	}
+	err = ps.Copy(src, dst, true)
+	if err != nil {
+		return err
+	}
+	err = ps.Remove([]string{src}, true)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Copy duplicates a parameter from src to dst
+func (ps *ParameterStore) Copy(src string, dst string, recurse bool) error {
 	if !ps.Decrypt {
 		// Decryption required for copy
 		ps.Decrypt = true
@@ -167,19 +234,24 @@ func (ps *ParameterStore) Copy(src string, dest string) error {
 		}()
 	}
 	src = fqp(src, ps.Cwd)
-	dest = fqp(dest, ps.Cwd)
+	dst = fqp(dst, ps.Cwd)
 	if ps.isParameter(src) {
-		return ps.copyParameter(src, dest)
+		if ps.isPath(dst) {
+			_dst := strings.Split(src, Delimiter)
+			dst = dst + Delimiter + _dst[len(_dst)-1]
+			fmt.Println(dst)
+		}
+		return ps.copyParameter(src, dst)
 	} else if ps.isPath(src) {
-		if ps.Recurse {
-			return ps.copyPath(src, dest)
+		if recurse {
+			return ps.copyPath(src, dst)
 		}
 		return errors.New(src + " is a path")
 	}
 	return errors.New("Invalid source " + src)
 }
 
-func (ps *ParameterStore) copyPath(srcPath string, destPath string) error {
+func (ps *ParameterStore) copyPath(srcPath string, dstPath string) error {
 	params := &ssm.GetParametersByPathInput{
 		Path:      aws.String(srcPath),
 		Recursive: aws.Bool(true),
@@ -189,11 +261,11 @@ func (ps *ParameterStore) copyPath(srcPath string, destPath string) error {
 		return err
 	}
 	var srcName string
-	var destName string
+	var dstName string
 	for _, r := range getResp.Parameters {
 		srcName = aws.StringValue(r.Name)
-		destName = strings.Join([]string{destPath, srcName[len(srcPath)+1:]}, Delimiter)
-		err = ps.copyParameter(srcName, destName)
+		dstName = strings.Join([]string{dstPath, srcName[len(srcPath)+1:]}, Delimiter)
+		err = ps.copyParameter(srcName, dstName)
 		if err != nil {
 			return err
 		}
@@ -201,7 +273,7 @@ func (ps *ParameterStore) copyPath(srcPath string, destPath string) error {
 	return nil
 }
 
-func (ps *ParameterStore) copyParameter(src string, dest string) error {
+func (ps *ParameterStore) copyParameter(src string, dst string) error {
 	if !ps.isParameter(src) {
 		return errors.New("source must be a parameter")
 	}
@@ -211,13 +283,13 @@ func (ps *ParameterStore) copyParameter(src string, dest string) error {
 	}
 	pLatest := pHist[len(pHist)-1]
 	putParamInput := &ssm.PutParameterInput{
-		Name:           aws.String(dest),
+		Name:           aws.String(dst),
 		Type:           pLatest.Type,
 		Value:          pLatest.Value,
 		KeyId:          pLatest.KeyId,
 		Description:    pLatest.Description,
 		AllowedPattern: pLatest.AllowedPattern,
-		Overwrite:      aws.Bool(true),
+		Overwrite:      aws.Bool(true), // TODO Prompt for overwrite
 	}
 	_, err = ps.Put(putParamInput)
 	if err != nil {

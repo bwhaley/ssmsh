@@ -50,6 +50,12 @@
   revision = "a5cdd64afdee435007ee3e9f6ed4684af949d568"
 
 [[projects]]
+  name = "github.com/mattn/go-shellwords"
+  packages = ["."]
+  revision = "02e3cf038dcea8290e44424da473dd12be796a8a"
+  version = "v1.0.3"
+
+[[projects]]
   name = "golang.org/x/sys"
   packages = ["unix"]
   revision = "8dbc5d05d6edcc104950cc299a1ce6641235bc86"
@@ -57,6 +63,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "940ca7fd553e2eaeb1b6b633a736758cfef60ba3cc9294b63304045d29ca6eaf"
+  inputs-digest = "baf8e54ee2862b2e2d5f43bcf8e34cdd9131d66cfa7a0972d3bc808ffbe9ed1f"
   solver-name = "gps-cdcl"
   solver-version = 1

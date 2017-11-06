@@ -11,6 +11,46 @@ import (
 	"github.com/kountable/pssh/parameterstore"
 )
 
+var EddardStark = &ssm.Parameter{
+	Name:  aws.String("/House/Stark/EddardStark"),
+	Type:  aws.String("String"),
+	Value: aws.String("Lord"),
+}
+var CatelynStark = &ssm.Parameter{
+	Name:  aws.String("/House/Stark/CatelynStark"),
+	Type:  aws.String("String"),
+	Value: aws.String("Lady"),
+}
+var RobStark = &ssm.Parameter{
+	Name:  aws.String("/House/Stark/RobStark"),
+	Type:  aws.String("String"),
+	Value: aws.String("Noble"),
+}
+var JonSnow = &ssm.Parameter{
+	Name:  aws.String("/House/Stark/JonSnow"),
+	Type:  aws.String("String"),
+	Value: aws.String("Bastard"),
+}
+var DaenerysTargaryen = &ssm.Parameter{
+	Name:  aws.String("/House/Targaryen/DaenerysTargaryen"),
+	Type:  aws.String("String"),
+	Value: aws.String("Noble"),
+}
+
+var HouseStark = []*ssm.Parameter{
+	EddardStark,
+	CatelynStark,
+	RobStark,
+}
+
+var HouseStarkNext = []*ssm.Parameter{
+	JonSnow,
+}
+
+var HouseTargaryen = []*ssm.Parameter{
+	DaenerysTargaryen,
+}
+
 type mockedSSM struct {
 	ssmiface.SSMAPI
 	GetParametersByPathResp ssm.GetParametersByPathOutput
@@ -78,7 +118,7 @@ func TestPut(t *testing.T) {
 		},
 	}
 	putParameterInput := ssm.PutParameterInput{
-		Name:        aws.String("/Houses/Stark/EddardStark"),
+		Name:        aws.String("/House/Stark/EddardStark"),
 		Value:       aws.String("Lord"),
 		Description: aws.String("Lord of Winterfell in Season 1"),
 		Type:        aws.String("String"),
@@ -94,9 +134,9 @@ func TestPut(t *testing.T) {
 	}
 }
 
-func TestCopyParameter(t *testing.T) {
-	srcParam := "/Houses/Stark/JonSnow"
-	dstParam := "/Houses/Targaryen/JonSnow"
+func TestMoveParameter(t *testing.T) {
+	srcParam := "/House/Stark/SansaStark"
+	dstParam := "/House/Lannister/SansaStark"
 	var p parameterstore.ParameterStore
 	p.NewParameterStore()
 	p.Cwd = parameterstore.Delimiter
@@ -104,14 +144,89 @@ func TestCopyParameter(t *testing.T) {
 		GetParameterResp: []ssm.GetParameterOutput{
 			{
 				Parameter: &ssm.Parameter{
-					Name:  aws.String("/Houses/Stark/JonSnow"),
+					Name:  aws.String(srcParam),
+					Type:  aws.String("String"),
+					Value: aws.String("Noble"),
+				},
+			},
+			{
+				Parameter: &ssm.Parameter{
+					Name:  aws.String(dstParam),
+					Type:  aws.String("String"),
+					Value: aws.String("Noble"),
+				},
+			},
+		},
+		GetParameterHistoryResp: ssm.GetParameterHistoryOutput{
+			Parameters: []*ssm.ParameterHistory{
+				{
+					Name:        aws.String(srcParam),
+					Value:       aws.String("Noble"),
+					Type:        aws.String("String"),
+					Description: aws.String("Eldest daughter of House Stark, bethrothed to Tyrion Lannister"),
+					Version:     aws.Int64(2),
+				},
+				{
+					Name:        aws.String(srcParam),
+					Value:       aws.String("Noble"),
+					Type:        aws.String("String"),
+					Description: aws.String("Eldest daughter of House Stark"),
+					Version:     aws.Int64(1),
+				},
+			},
+		},
+	}
+	err := p.Move(srcParam, dstParam)
+	if err != nil {
+		t.Fatal("Error moving parameter", err)
+	}
+	p.Client = mockedSSM{
+		GetParameterResp: []ssm.GetParameterOutput{
+			{
+				Parameter: &ssm.Parameter{
+					Name:  aws.String(dstParam),
+					Type:  aws.String("String"),
+					Value: aws.String("Noble"),
+				},
+			},
+		},
+	}
+	resp, err := p.Get([]string{srcParam})
+	if err != nil {
+		msg := fmt.Errorf("Error getting %s: %s", srcParam, err)
+		t.Fatal(msg)
+	}
+	if len(resp) > 0 {
+		if err != nil {
+			msg := fmt.Errorf("Expected parameter %s to be removed but found %v", srcParam, resp)
+			t.Fatal(msg)
+		}
+	}
+	_, err = p.Get([]string{dstParam})
+	if err != nil {
+		msg := fmt.Errorf("Expected to find %s but didn't!", dstParam)
+		t.Fatal(msg)
+	}
+}
+
+func TestCopyParameter(t *testing.T) {
+	srcParam := "/House/Stark/JonSnow"
+	dstParam := "/House/Targaryen/JonSnow"
+	var p parameterstore.ParameterStore
+	p.NewParameterStore()
+	p.Cwd = parameterstore.Delimiter
+	p.Client = mockedSSM{
+		GetParameterResp: []ssm.GetParameterOutput{
+			{
+				Parameter: &ssm.Parameter{
+					Name:  aws.String("/House/Stark/JonSnow"),
 					Type:  aws.String("String"),
 					Value: aws.String("King"),
 				},
 			},
 			{
 				Parameter: &ssm.Parameter{
-					Name:  aws.String("/Houses/Targaryen/JonSnow"),
+					Name:  aws.String("/House/Targaryen/JonSnow"),
 					Type:  aws.String("String"),
 					Value: aws.String("King"),
 				},
@@ -120,14 +235,14 @@ func TestCopyParameter(t *testing.T) {
 		GetParameterHistoryResp: ssm.GetParameterHistoryOutput{
 			Parameters: []*ssm.ParameterHistory{
 				{
-					Name:        aws.String("/Houses/Stark/JonSnow"),
+					Name:        aws.String("/House/Stark/JonSnow"),
 					Value:       aws.String("King"),
 					Type:        aws.String("String"),
 					Description: aws.String("King of the north"),
 					Version:     aws.Int64(2),
 				},
 				{
-					Name:        aws.String("/Houses/Stark/JonSnow"),
+					Name:        aws.String("/House/Stark/JonSnow"),
 					Value:       aws.String("Bastard"),
 					Type:        aws.String("String"),
 					Description: aws.String("Bastard of Winterfell"),
@@ -136,7 +251,7 @@ func TestCopyParameter(t *testing.T) {
 			},
 		},
 	}
-	err := p.Copy(srcParam, dstParam)
+	err := p.Copy(srcParam, dstParam, false)
 	if err != nil {
 		t.Fatal("Error copying parameter", err)
 	}
@@ -144,7 +259,7 @@ func TestCopyParameter(t *testing.T) {
 	if err != nil {
 		t.Fatal("Error getting parameter", err)
 	}
-	expectedName := "/Houses/Targaryen/JonSnow"
+	expectedName := "/House/Targaryen/JonSnow"
 	if aws.StringValue(resp[0].Name) != expectedName {
 		msg := fmt.Errorf("expected %s, got %s", expectedName, aws.StringValue(resp[0].Name))
 		t.Fatal(msg)
@@ -162,18 +277,18 @@ func TestCwd(t *testing.T) {
 			Expected: "/",
 		},
 		{
-			Path: "/dev/db/../..//prod",
+			Path: "/House/Stark/..///Deceased",
 			GetParametersByPathResp: ssm.GetParametersByPathOutput{
 				Parameters: []*ssm.Parameter{
 					{
-						Name:  aws.String("/prod/db/username"),
+						Name:  aws.String("/House/Stark/EddardStark"),
 						Type:  aws.String("String"),
-						Value: aws.String("someusername"),
+						Value: aws.String("Lord"),
 					},
 				},
 				NextToken: aws.String(""),
 			},
-			Expected: "/prod",
+			Expected: "/House/Deceased",
 		},
 	}
 
@@ -206,17 +321,17 @@ func TestCwd(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	testParams := []string{
-		"/dev/db/username",
-		"/dev/db/password",
-		"/dev/db/foobar",
+		"/House/Stark/EddardStark",
+		"/House/Stark/CatelynStark",
+		"/House/Stark/TyrionLannister",
 	}
 	deleteParametersOutput := ssm.DeleteParametersOutput{
 		DeletedParameters: []*string{
-			aws.String("/dev/db/username"),
-			aws.String("/dev/db/password"),
+			aws.String("/House/Stark/EddardStark"),
+			aws.String("/House/Stark/CatelynStark"),
 		},
 		InvalidParameters: []*string{
-			aws.String("/dev/db/foobar"),
+			aws.String("/House/Stark/TyrionLannister"),
 		},
 	}
 
@@ -225,22 +340,24 @@ func TestDelete(t *testing.T) {
 	p.Client = mockedSSM{
 		DeleteParametersResp: deleteParametersOutput,
 	}
-	err := p.Delete(testParams)
+	err := p.Remove(testParams, false)
 	if err == nil {
-		msg := fmt.Errorf("Expected error for param %s, got %s ", testParams[2], err)
+		msg := fmt.Errorf("Expected error for param %s, got %v ", testParams[2], err)
 		t.Fatal(msg)
 	}
 }
 
 func TestGetHistory(t *testing.T) {
-	testParam := "/dev/db/username"
+	testParam := "/House/Stark/EddardStark"
 	getHistoryOutput := ssm.GetParameterHistoryOutput{
 		Parameters: []*ssm.ParameterHistory{
 			{
-				Name: aws.String("/dev/db/username"),
+				Name:    aws.String("/House/Stark/EddardStark"),
+				Version: aws.Int64(2),
 			},
 			{
-				Name: aws.String("/dev/db/username"),
+				Name:    aws.String("/House/Stark/EddardStark"),
+				Version: aws.Int64(1),
 			},
 		},
 		NextToken: aws.String(""),
@@ -271,21 +388,21 @@ func TestList(t *testing.T) {
 		Recurse                 bool
 	}{
 		{
-			Query:   "/dev/db/username",
+			Query:   "/House/Stark/EddardStark",
 			Recurse: false,
 			GetParametersByPathResp: ssm.GetParametersByPathOutput{
 				Parameters: []*ssm.Parameter{},
 				NextToken:  aws.String(""),
 			},
 			Expected: []string{
-				"/dev/db/username",
+				"/House/Stark/EddardStark",
 			},
 			GetParametersResp: ssm.GetParametersOutput{
 				Parameters: []*ssm.Parameter{
 					{
-						Name:  aws.String("/dev/db/username"),
+						Name:  aws.String("/House/Stark/EddardStark"),
 						Type:  aws.String("String"),
-						Value: aws.String("someusername"),
+						Value: aws.String("Lord"),
 					},
 				},
 			},
@@ -306,135 +423,38 @@ func TestList(t *testing.T) {
 			},
 		},
 		{
-			Query:   "/dev/db",
+			Query:   "/House/Stark",
 			Recurse: false,
 			GetParametersByPathResp: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("/dev/db/name"),
-						Type:  aws.String("String"),
-						Value: aws.String("mydb"),
-					},
-					{
-						Name:  aws.String("/dev/db/username"),
-						Type:  aws.String("String"),
-						Value: aws.String("myusername"),
-					},
-					{
-						Name:  aws.String("/dev/db/password"),
-						Type:  aws.String("SecureString"),
-						Value: aws.String("mypassword"),
-					},
-				},
-				NextToken: aws.String(""),
+				Parameters: HouseStark,
+				NextToken:  aws.String(""),
 			},
 			Expected: []string{
-				"name",
-				"username",
-				"password",
-			},
-			GetParametersResp: ssm.GetParametersOutput{
-				InvalidParameters: []*string{
-					aws.String("/dev/db"),
-					aws.String("String"),
-					aws.String("mydb"),
-				},
+				"EddardStark",
+				"CatelynStark",
+				"RobStark",
 			},
 		},
 		{
-			Query:   "/dev/db",
-			Recurse: false,
-			GetParametersByPathResp: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("/dev/db/name"),
-						Type:  aws.String("String"),
-						Value: aws.String("mydb"),
-					},
-					{
-						Name:  aws.String("/dev/db/username"),
-						Type:  aws.String("String"),
-						Value: aws.String("myusername"),
-					},
-					{
-						Name:  aws.String("/dev/db/password"),
-						Type:  aws.String("SecureString"),
-						Value: aws.String("mypassword"),
-					},
-				},
-				NextToken: aws.String("A1B2C3D4"),
-			},
-			GetParametersByPathNext: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("/dev/db/test/port"),
-						Type:  aws.String("String"),
-						Value: aws.String("3306"),
-					},
-				},
-				NextToken: aws.String(""),
-			},
-			Expected: []string{
-				"name",
-				"username",
-				"password",
-				"test/",
-			},
-			GetParametersResp: ssm.GetParametersOutput{
-				InvalidParameters: []*string{
-					aws.String("/dev/db"),
-					aws.String("String"),
-					aws.String("mydb"),
-				},
-			},
-		},
-		{
-			Query:   "/dev/db",
+			Query:   "/House/",
 			Recurse: true,
 			GetParametersByPathResp: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("/dev/db/name"),
-						Type:  aws.String("String"),
-						Value: aws.String("mydb"),
-					},
-					{
-						Name:  aws.String("/dev/db/username"),
-						Type:  aws.String("String"),
-						Value: aws.String("myusername"),
-					},
-					{
-						Name:  aws.String("/dev/db/password"),
-						Type:  aws.String("SecureString"),
-						Value: aws.String("mypassword"),
-					},
-				},
-				NextToken: aws.String("A1B2C3D4"),
+				Parameters: HouseStark,
+				NextToken:  aws.String("A1B2C3D4"),
 			},
 			GetParametersByPathNext: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("/dev/db/test/port"),
-						Type:  aws.String("String"),
-						Value: aws.String("3306"),
-					},
-				},
-				NextToken: aws.String(""),
+				Parameters: []*ssm.Parameter{JonSnow, DaenerysTargaryen},
+				NextToken:  aws.String(""),
 			},
 			Expected: []string{
-				"/dev/db/name",
-				"/dev/db/username",
-				"/dev/db/password",
-				"/dev/db/test/port",
+				"/House/Stark/EddardStark",
+				"/House/Stark/CatelynStark",
+				"/House/Stark/RobStark",
+				"/House/Stark/JonSnow",
+				"/House/Targaryen/DaenerysTargaryen",
 			},
-			GetParametersResp: ssm.GetParametersOutput{
-				InvalidParameters: []*string{
-					aws.String("/dev/db"),
-					aws.String("String"),
-					aws.String("mydb"),
-				},
-			},
-		}}
+		},
+	}
 
 	for _, c := range cases {
 		var p parameterstore.ParameterStore
@@ -445,12 +465,7 @@ func TestList(t *testing.T) {
 			GetParametersResp:       c.GetParametersResp,
 		}
 		p.Cwd = parameterstore.Delimiter
-		if c.Recurse {
-			p.Recurse = true
-		} else {
-			p.Recurse = false
-		}
-		resp, err := p.List(c.Query)
+		resp, err := p.List(c.Query, c.Recurse)
 		if err != nil {
 			t.Fatal("unexpected error", err)
 		}

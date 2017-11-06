@@ -6,7 +6,7 @@ import (
 
 const decryptUsage string = `
 decrypt usage: decrypt
-Toggles decryption of SecureString parameter values for ls and get operations. Default is false.
+Toggles decryption of SecureString parameter values. Default is false.
 `
 
 // decrypt toggles parameter decryption for SecureString values

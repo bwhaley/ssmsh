@@ -5,17 +5,20 @@ import (
 )
 
 const rmUsage string = `
-usage: rm parameter ...
+usage: rm -[r|R] parameter ...
 Remove parameters. Separate multiple parameters with spaces. Parameters may be
 absolute or relative.
-Example:
-/> rm /foo/bar baz
+-[r|R] Remove parameters recursively
+Example usage:
+/> rm /foo/bar /baz
+/> rm -R /foo/
 `
 
 func rm(c *ishell.Context) {
 	var err error
-	if len(c.Args) >= 1 {
-		err = ps.Delete(c.Args)
+	paths, recurse := checkRecursion(c.Args)
+	if len(paths) >= 1 {
+		err = ps.Remove(paths, recurse)
 		if err != nil {
 			shell.Println("Error: ", err)
 		}

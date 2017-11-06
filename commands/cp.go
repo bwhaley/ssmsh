@@ -11,19 +11,12 @@ Copy a parameter from src to dest.
 `
 
 func cp(c *ishell.Context) {
-	paths := c.Args
-	for i, p := range paths {
-		if p == "-R" {
-			if !ps.Recurse {
-				ps.Recurse = true
-				defer func() {
-					ps.Recurse = false // recursive listing is per invocation
-				}()
-			}
-			paths = remove(paths, i)
-		}
+	paths, recurse := checkRecursion(c.Args)
+	if len(paths) != 2 {
+		shell.Println("Expected src and dst")
+		shell.Println(cpUsage)
 	}
-	err := ps.Copy(c.Args[0], c.Args[1])
+	err := ps.Copy(paths[0], paths[1], recurse)
 	if err != nil {
 		shell.Println(err)
 	}

@@ -22,7 +22,7 @@ Example of multiline put:
 ... value="Queen"
 ... type="String"
 ... description="Queen of the Seven Kingdoms"
-... key=arn:aws:kms:us-west-2:012345678901:key/321ec4ec-ed00-427f-9729-748ba2254794
+... key=arn:aws:kms:us-west-2:012345678901:key/321examp-ed00-427f-9729-748ba2254794
 ... overwrite=true
 ... pattern=[A-z]+
 ...
@@ -56,7 +56,7 @@ func put(c *ishell.Context) {
 	} else {
 		version := strconv.Itoa(int(aws.Int64Value(resp.Version)))
 		if version != "" {
-			shell.Println("Put version " + version)
+			shell.Println("Put " + aws.StringValue(putParamInput.Name) + " version " + version)
 		}
 	}
 }

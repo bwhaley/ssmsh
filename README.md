@@ -55,7 +55,7 @@ $ pssh -file commands.txt
 * [x] cp
 * [x] Read commands from a file
 * [x] tests
-* [ ] mv
+* [x] mv
 * [ ] recursive delete
 * [ ] Improve README
 * [ ] Flexible and improved output formats
@@ -66,9 +66,12 @@ $ pssh -file commands.txt
 ## License
 MIT
 
+## Related tools
+[Chamber](https://github.com/segmentio/chamber) | A tool for managing secrets
 
 ## Credits
 Library | Use
 ------- | -----
 [abiosoft/ishell](https://github.com/abiosoft/ishell) | The interactive shell for golang
 [aws-sdk-go](https://github.com/aws/aws-sdk-go) | The AWS SDK for Go
+[mattn/go-shellwords](github.com/mattn/go-shellwords) | Parsing for the shell made easy

@@ -2,18 +2,25 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/abiosoft/ishell"
 	"github.com/kountable/pssh/commands"
 	"github.com/kountable/pssh/parameterstore"
+	"github.com/mattn/go-shellwords"
 )
 
 func main() {
 	shell := ishell.New()
 	var ps parameterstore.ParameterStore
-	ps.NewParameterStore()
+	err := ps.NewParameterStore()
+	if err != nil {
+		shell.Println("Error initializing session. Is your authentication correct?", err)
+		os.Exit(1)
+	}
 	commands.Init(shell, &ps)
 
 	_fn := flag.String("file", "", "Read commands from file")
@@ -37,7 +44,20 @@ func processFromFile(shell *ishell.Shell, fn string) {
 	}
 	lines := strings.Split(string(content), "\n")
 	for _, line := range lines {
-		options := strings.Split(line, " ")
-		shell.Process(options...)
+		if line == "" || string(line[0]) == "#" {
+			continue
+		}
+		args, err := shellwords.Parse(line)
+		if err != nil {
+			msg := fmt.Errorf("Error parsing %s: %v", line, err)
+			shell.Println(msg)
+			os.Exit(1)
+		}
+		err = shell.Process(args...)
+		if err != nil {
+			msg := fmt.Errorf("Error executing %s: %v", line, err)
+			shell.Println(msg)
+			os.Exit(1)
+		}
 	}
 }
