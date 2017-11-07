@@ -155,6 +155,7 @@ $ pssh put name=/House/Lannister/CerseiLannister value="Noble" description="Daug
 * [ ] Flexible and improved output formats
 * [ ] Release via homebrew
 * [ ] Copy between accounts using profiles
+* [ ] Find parameter
 
 
 ## License
