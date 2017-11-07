@@ -157,7 +157,7 @@ func (ps *ParameterStore) delete(params []string) (err error) {
 	return nil
 }
 
-// GetHistory returns the details and history of a parameter
+// GetHistory returns the parameter history
 func (ps *ParameterStore) GetHistory(param string) (r []ssm.ParameterHistory, err error) {
 	history := &ssm.GetParameterHistoryInput{
 		Name:           aws.String(fqp(param, ps.Cwd)),
@@ -220,6 +220,8 @@ func (ps *ParameterStore) Move(src string, dst string) error {
 
 // Copy duplicates a parameter from src to dst
 func (ps *ParameterStore) Copy(src string, dst string, recurse bool) error {
+	src = fqp(src, ps.Cwd)
+	dst = fqp(dst, ps.Cwd)
 	var srcIsParameter, dstIsParameter, srcIsPath, dstIsPath bool
 	if !ps.Decrypt {
 		// Decryption required for copy
@@ -228,22 +230,20 @@ func (ps *ParameterStore) Copy(src string, dst string, recurse bool) error {
 			ps.Decrypt = false
 		}()
 	}
-	srcIsParameter = ps.isParameter(fqp(src, ps.Cwd))
+	srcIsParameter = ps.isParameter(src)
 	if !srcIsParameter {
-		srcIsPath = ps.isPath(fqp(src, ps.Cwd))
+		srcIsPath = ps.isPath(src)
 	}
-	dstIsParameter = ps.isParameter(fqp(dst, ps.Cwd))
+	dstIsParameter = ps.isParameter(dst)
 	if !dstIsParameter {
-		dstIsPath = ps.isPath(fqp(dst, ps.Cwd))
+		dstIsPath = ps.isPath(dst)
 	}
-	if srcIsParameter && !dstIsParameter && !dstIsPath {
+	if srcIsParameter && !dstIsPath {
 		return ps.copyParameter(src, dst)
-	} else if srcIsParameter && dstIsParameter {
-		return ps.copyParameter(src, dst)
-	} else if srcIsPath && dstIsParameter {
-		return fmt.Errorf("%s is a path (not copied)", src)
 	} else if srcIsParameter && dstIsPath {
 		return ps.copyParameterToPath(src, dst)
+	} else if srcIsPath && dstIsParameter {
+		return fmt.Errorf("%s is a path (not copied)", src)
 	} else if srcIsPath && dstIsPath {
 		if recurse {
 			return ps.copyPathToPath(src, dst)
@@ -251,14 +251,11 @@ func (ps *ParameterStore) Copy(src string, dst string, recurse bool) error {
 		return fmt.Errorf("%s and %s are both paths but recursion not requested. Use -R", src, dst)
 	}
 	return fmt.Errorf("%s or %s is not a path or parameter", src, dst)
-
 }
 
 func (ps *ParameterStore) copyParameter(src string, dst string) error {
-	src = fqp(src, ps.Cwd)
-	dst = fqp(dst, ps.Cwd)
 	if !ps.isParameter(src) {
-		return errors.New("source must be a parameter")
+		return errors.New("source must be a parameter: " + src)
 	}
 	pHist, err := ps.GetHistory(src)
 	if err != nil {
@@ -282,41 +279,56 @@ func (ps *ParameterStore) copyParameter(src string, dst string) error {
 }
 
 func (ps *ParameterStore) copyParameterToPath(srcParam string, dstPath string) error {
-	srcParam = fqp(srcParam, ps.Cwd)
 	srcParamElements := strings.Split(srcParam, Delimiter)
-	dstParam := fqp(dstPath, ps.Cwd) + Delimiter + srcParamElements[len(srcParamElements)-1]
+	dstParam := dstPath + Delimiter + srcParamElements[len(srcParamElements)-1]
 	return ps.copyParameter(srcParam, dstParam)
 }
 
 func (ps *ParameterStore) copyPathToPath(srcPath string, dstPath string) error {
-	srcPath = fqp(srcPath, ps.Cwd)
+	/*
+		1) Get all source parameters
+		2) Map sources to destinations
+		3) Create destinations
+	*/
 	params := &ssm.GetParametersByPathInput{
 		Path:      aws.String(srcPath),
 		Recursive: aws.Bool(true),
 	}
-	getResp, err := ps.Client.GetParametersByPath(params)
-	if err != nil {
-		return err
-	}
-
-	var srcParam string
-	var dstParam string
-	for _, r := range getResp.Parameters {
-		pathElements := strings.Split(srcPath, Delimiter)
-		dstPathRoot := pathElements[len(pathElements)-1]
-		srcParam = aws.StringValue(r.Name)
-		srcParamShortName := srcParam[len(srcPath)+1:]
-		dstParam = strings.Join([]string{
-			fqp(dstPath, ps.Cwd),
-			dstPathRoot,
-			srcParamShortName,
-		}, Delimiter)
-		err = ps.copyParameter(srcParam, dstParam)
+	for {
+		resp, err := ps.Client.GetParametersByPath(params)
 		if err != nil {
 			return err
 		}
+		paramMap := makeParameterMap(resp.Parameters, srcPath, dstPath)
+		for src, dst := range paramMap {
+			err = ps.copyParameter(src, dst)
+			if err != nil {
+				return err
+			}
+		}
+		if aws.StringValue(resp.NextToken) == "" {
+			break
+		}
+		params.NextToken = resp.NextToken
 	}
 	return nil
+}
+
+func makeParameterMap(params []*ssm.Parameter, srcPath string, dstPath string) map[string]string {
+	var sourceToDst = make(map[string]string)
+	for _, p := range params {
+		srcParam := aws.StringValue(p.Name)
+		srcPathElements := strings.Split(srcPath, Delimiter)
+		srcBasePath := srcPathElements[len(srcPathElements)-1]
+		dstParamName := string(srcParam[len(srcPath)+1:])
+		dstParam := strings.Join([]string{
+			dstPath,
+			srcBasePath,
+			dstParamName,
+		}, Delimiter)
+		sourceToDst[srcParam] = dstParam
+	}
+	return sourceToDst
 }
 
 // inputPaths cleans a list of parameter paths and returns strings

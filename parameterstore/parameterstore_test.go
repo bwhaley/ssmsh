@@ -16,21 +16,25 @@ var EddardStark = &ssm.Parameter{
 	Type:  aws.String("String"),
 	Value: aws.String("Lord"),
 }
+
 var CatelynStark = &ssm.Parameter{
 	Name:  aws.String("/House/Stark/CatelynStark"),
 	Type:  aws.String("String"),
 	Value: aws.String("Lady"),
 }
+
 var RobStark = &ssm.Parameter{
 	Name:  aws.String("/House/Stark/RobStark"),
 	Type:  aws.String("String"),
 	Value: aws.String("Noble"),
 }
+
 var JonSnow = &ssm.Parameter{
 	Name:  aws.String("/House/Stark/JonSnow"),
 	Type:  aws.String("String"),
 	Value: aws.String("Bastard"),
 }
+
 var DaenerysTargaryen = &ssm.Parameter{
 	Name:  aws.String("/House/Targaryen/DaenerysTargaryen"),
 	Type:  aws.String("String"),
@@ -50,6 +54,8 @@ var HouseStarkNext = []*ssm.Parameter{
 var HouseTargaryen = []*ssm.Parameter{
 	DaenerysTargaryen,
 }
+
+const NextToken = "A1B2C3D4"
 
 type mockedSSM struct {
 	ssmiface.SSMAPI
@@ -205,6 +211,55 @@ func TestMoveParameter(t *testing.T) {
 	_, err = p.Get([]string{dstParam})
 	if err != nil {
 		msg := fmt.Errorf("Expected to find %s but didn't!", dstParam)
+		t.Fatal(msg)
+	}
+}
+
+func TestCopyPath(t *testing.T) {
+	srcPath := "/House/Stark"
+	dstPath := "/House/Targaryen"
+
+	var p parameterstore.ParameterStore
+	p.NewParameterStore()
+	p.Cwd = parameterstore.Delimiter
+	bothHouses := append(HouseStark, HouseTargaryen...)
+	p.Client = mockedSSM{
+		GetParameterResp: []ssm.GetParameterOutput{
+			{Parameter: EddardStark},
+			{Parameter: CatelynStark},
+			{Parameter: RobStark},
+			{Parameter: JonSnow},
+			{Parameter: DaenerysTargaryen},
+		},
+		GetParametersByPathResp: ssm.GetParametersByPathOutput{
+			Parameters: bothHouses,
+			NextToken:  aws.String(NextToken),
+		},
+		GetParametersByPathNext: ssm.GetParametersByPathOutput{
+			Parameters: []*ssm.Parameter{JonSnow},
+			NextToken:  aws.String(""),
+		},
+		GetParameterHistoryResp: ssm.GetParameterHistoryOutput{
+			Parameters: []*ssm.ParameterHistory{
+				{
+					Name:    aws.String("/House/Stark/EddardStark"),
+					Version: aws.Int64(2),
+				},
+			},
+			NextToken: aws.String(""),
+		},
+	}
+	err := p.Copy(srcPath, dstPath, true)
+	if err != nil {
+		t.Fatal("Error copying parameter path: ", err)
+	}
+	expectedName := "/House/Targaryen/Stark/EddardStark"
+	resp, err := p.GetHistory(expectedName)
+	if err != nil {
+		t.Fatal("Error getting history: ", err)
+	}
+	if len(resp) != 1 {
+		msg := fmt.Errorf("Expected history of length 1, got %s", resp)
 		t.Fatal(msg)
 	}
 }
@@ -440,7 +495,7 @@ func TestList(t *testing.T) {
 			Recurse: true,
 			GetParametersByPathResp: ssm.GetParametersByPathOutput{
 				Parameters: HouseStark,
-				NextToken:  aws.String("A1B2C3D4"),
+				NextToken:  aws.String(NextToken),
 			},
 			GetParametersByPathNext: ssm.GetParametersByPathOutput{
 				Parameters: []*ssm.Parameter{JonSnow, DaenerysTargaryen},

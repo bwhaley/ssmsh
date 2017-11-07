@@ -1,63 +1,157 @@
-#
-pssh is an interactive shell for the EC2 Parameter Store.
+# pssh
+pssh is an interactive shell for the EC2 Parameter Store. Features:
+* Interact with the parameter store hierarchy using familiar commands like cd, ls, cp, mv, and rm
+* Recursively list, copy, and remove parameters
+* Get parameter history
+* Create new parametrs using put
+* Supports emacs-style command shell navigation hotkeys
+* Submit batch commands with the `-file` flag
+* Inline commands
 
 
 ## Installation
-go get github.com/kountable/pssh
+1. `go get github.com/kountable/pssh`
+2. Set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
 
 ## Usage
-First, set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
+### Help
+```bash
+/>help
 
-### Basic features
-```
-/> help
-  cd          change your relative location within the parameter store
-  clear       clear the screen
-  cp           not yet implemented
-  decrypt   toggle parameter decryption
+Commands:
+  cd           change your relative location within the parameter store
+  clear        clear the screen
+  cp           copy source to dest
+  decrypt      toggle parameter decryption
   exit         exit the program
   get          get parameters
-  help        display help
-  history    toggle parameter history
-  ls            list parameters
-  mv          not yet implemented
+  help         display help
+  history      get parameter history
+  ls           list parameters
+  mv           move parameters
   put          set parameter
   rm           remove parameters
-/> cd /foo
-/foo> ls
-bar
-baz
-/foo> get bar
-Parameter  Type               Value
-/foo/bar       SecureString    -
+```
+### List contents of a path
+```bash
+/>ls /House
+Lannister/
+Stark/
+Targaryen/
+```
+
+### Change dir
+```bash
+/>cd /House
+/House>
+```
+
+### Get parameter
+```bash
+/>get /House/Stark/JonSnow
+[{
+  Name: "/House/Stark/JonSnow",
+  Type: "String",
+  Value: "Bastard",
+  Version: 2
+}]
+```
+
+### Get encrypted parameters
+```bash
+/>get /House/Stark/VerySecretInformation
+[{
+  Name: "/House/Stark/VerySecretInformation",
+  Type: "SecureString",
+  Value: "AQICAHhBW4N+....",
+  Version: 1
+}]
 />decrypt
 Decrypt is true
-/>get bar
-Parameter  Type               Value
-/foo/bar      SecureString    baz
+/>get /House/Stark/VerySecretInformation
+[{
+  Name: "/House/Stark/VerySecretInformation",
+  Type: "SecureString",
+  Value: "Jon is not a bastard!",
+  Version: 1
+}]
+```
+
+### Get parameter history
+```bash
+/>history /House/Stark/JonSnow
+[{
+  Description: "Bastard son of Eddard",
+  LastModifiedDate: 2017-11-06 23:59:02 +0000 UTC,
+  LastModifiedUser: "bwhaley",
+  Name: "/House/Stark/JonSnow",
+  Type: "String",
+  Value: "Bastard",
+  Version: 1
+} {
+  Description: "Bastard son of Eddard Stark, man of the Night's Watch",
+  LastModifiedDate: 2017-11-06 23:59:05 +0000 UTC,
+  LastModifiedUser: "bwhaley",
+  Name: "/House/Stark/JonSnow",
+  Type: "String",
+  Value: "Bastard",
+  Version: 2
+}]
+```
+
+### Copy a parameter
+```bash
+/>cp /House/Stark/JonSnow /House/Targaryen/JonSnow
+```
+
+### Copy an entire hierarchy
+```bash
+/> cp -R /House/Stark /House/Targaryen
+```
+
+### Remove parameters
+```bash
+/> rm /House/Stark/EddardStark
+```
+
+### Put new parameters
+```bash
+/> put
+Input options. End with a blank line.
+... name=/House/Targaryen/DaenerysTargaryen
+... value="Queen"
+... type=String
+... description="Mother of Dragons and Queen of Westeros"
+...
+/>
+```
+Alternatively:
+
+```bash
+/> put name=/House/Targaryen/DaenerysTargaryen value="Queen" type=String description="Mother of Dragons and Queen of Westeros"
+```
+
+###  Read commands in batches
+```bash
+$ cat << EOF > commands.txt
+put name=/House/Targaryen/DaenerysTargaryen value="Queen" type=String description="Mother of Dragons and Queen of Westeros"
+cp /House/Stark/JonSnow /House/Targaryen/JonSnow
+EOF
+$ pssh -file commands.txt
 ```
 
 ###  Inline commands
 ```
-$ pssh put name=/foo/bar value=baz type=string
+$ pssh put name=/House/Lannister/CerseiLannister value="Noble" description="Daughter of Tywin" type=string
 ```
-
-###  Read commands from files
-```
-$ cat << EOF > commands.txt
-put name=/foo/bar value=baz type=string
-put name=foo/baz value=bar type=string
-$ pssh -file commands.txt
-```
-
 
 ## todo
 * [x] cp
 * [x] Read commands from a file
 * [x] tests
 * [x] mv
-* [ ] recursive delete
-* [ ] Improve README
+* [x] recursive delete
+* [x] Improve README
 * [ ] Flexible and improved output formats
 * [ ] Release via homebrew
 * [ ] Copy between accounts using profiles
