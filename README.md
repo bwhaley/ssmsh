@@ -72,7 +72,7 @@ Decrypt is true
 [{
   Name: "/House/Stark/VerySecretInformation",
   Type: "SecureString",
-  Value: "Jon is not a bastard!",
+  Value: "There is a King in the family.",
   Version: 1
 }]
 ```
