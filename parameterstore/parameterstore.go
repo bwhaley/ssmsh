@@ -101,22 +101,9 @@ func (ps *ParameterStore) Remove(params []string, recurse bool) (err error) {
 			parametersToDelete = append(parametersToDelete, p)
 		} else if ps.isPath(p) {
 			if recurse {
-				additionalParams := &ssm.GetParametersByPathInput{
-					Path:      aws.String(p),
-					Recursive: aws.Bool(true),
-				}
-				for {
-					resp, err := ps.Client.GetParametersByPath(additionalParams)
-					if err != nil {
-						return err
-					}
-					for _, r := range resp.Parameters {
-						parametersToDelete = append(parametersToDelete, aws.StringValue(r.Name))
-					}
-					if aws.StringValue(resp.NextToken) == "" {
-						break
-					}
-					additionalParams.NextToken = resp.NextToken
+				err = ps.recursiveDelete(p)
+				if err != nil {
+					return err
 				}
 			} else {
 				return fmt.Errorf("tried to delete path %s but recursive not requested", p)
@@ -126,6 +113,29 @@ func (ps *ParameterStore) Remove(params []string, recurse bool) (err error) {
 		}
 	}
 	return ps.delete(parametersToDelete)
+}
+
+func (ps *ParameterStore) recursiveDelete(path string) (err error) {
+	var parametersToDelete []string
+	additionalParams := &ssm.GetParametersByPathInput{
+		Path:      aws.String(path),
+		Recursive: aws.Bool(true),
+	}
+	for {
+		resp, err := ps.Client.GetParametersByPath(additionalParams)
+		if err != nil {
+			return err
+		}
+		for _, r := range resp.Parameters {
+			parametersToDelete = append(parametersToDelete, aws.StringValue(r.Name))
+		}
+		if aws.StringValue(resp.NextToken) == "" {
+			break
+		}
+		additionalParams.NextToken = resp.NextToken
+	}
+	return ps.delete(parametersToDelete)
+
 }
 
 func (ps *ParameterStore) delete(params []string) (err error) {
@@ -314,7 +324,14 @@ func (ps *ParameterStore) copyPathToPath(srcPath string, dstPath string) error {
 	return nil
 }
 
+// makeParameterMap returns a map of source param name to dest param name
 func makeParameterMap(params []*ssm.Parameter, srcPath string, dstPath string) map[string]string {
+	/*
+		sample input:
+			params: [/House/Stark/JonSnow /House/Stark/Special/Bran]
+			srcPath: /House/Stark
+			dstPath: /House/Targaryen
+	*/
 	var sourceToDst = make(map[string]string)
 	for _, p := range params {
 		srcParam := aws.StringValue(p.Name)
