@@ -101,7 +101,7 @@ Decrypt is true
 
 ### Copy a parameter
 ```bash
-/>cp /House/Stark/JonSnow /House/Targaryen/JonSnow
+/>cp /House/Stark/SansaStark /House/Lannister/SansaStark
 ```
 
 ### Copy an entire hierarchy
