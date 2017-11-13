@@ -3,7 +3,7 @@ pssh is an interactive shell for the EC2 Parameter Store. Features:
 * Interact with the parameter store hierarchy using familiar commands like cd, ls, cp, mv, and rm
 * Recursively list, copy, and remove parameters
 * Get parameter history
-* Create new parametrs using put
+* Create new parameters using put
 * Supports emacs-style command shell navigation hotkeys
 * Submit batch commands with the `-file` flag
 * Inline commands
@@ -146,16 +146,15 @@ $ pssh put name=/House/Lannister/CerseiLannister value="Noble" description="Daug
 ```
 
 ## todo
-* [x] cp
-* [x] Read commands from a file
-* [x] tests
-* [x] mv
-* [x] recursive delete
-* [x] Improve README
 * [ ] Flexible and improved output formats
 * [ ] Release via homebrew
 * [ ] Copy between accounts using profiles
 * [ ] Find parameter
+* [ ] update parameter (put with fewer required fields)
+* [ ] Integration w/ CloudWatch Events for scheduled parameter updates
+* [ ] Export/import
+* [ ] Support globbing and/or regex
+* [ ] In memory parameter cache
 
 
 ## License
