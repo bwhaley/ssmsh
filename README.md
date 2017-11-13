@@ -72,7 +72,7 @@ Decrypt is true
 [{
   Name: "/House/Stark/VerySecretInformation",
   Type: "SecureString",
-  Value: "Jon is not a bastard!",
+  Value: "There is a King in the family.",
   Version: 1
 }]
 ```
@@ -101,7 +101,7 @@ Decrypt is true
 
 ### Copy a parameter
 ```bash
-/>cp /House/Stark/JonSnow /House/Targaryen/JonSnow
+/>cp /House/Stark/SansaStark /House/Lannister/SansaStark
 ```
 
 ### Copy an entire hierarchy
