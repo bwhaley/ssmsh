@@ -136,8 +136,9 @@ Alternatively:
 ###  Read commands in batches
 ```bash
 $ cat << EOF > commands.txt
-put name=/House/Targaryen/DaenerysTargaryen value="Queen" type=String description="Mother of Dragons and Queen of Westeros"
-cp /House/Stark/JonSnow /House/Targaryen/JonSnow
+put name=/House/Targaryen/DaenerysTargaryen value="Khaleesi" type=String description="Mother of Dragons"
+rm /House/Stark/RobStark
+cp -R /House/Baratheon /House/Lannister
 EOF
 $ pssh -file commands.txt
 ```
