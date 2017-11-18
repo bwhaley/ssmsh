@@ -23,12 +23,14 @@ func main() {
 	}
 	commands.Init(shell, &ps)
 
-	_fn := flag.String("file", "", "Read commands from file")
+	_fn := flag.String("file", "", "Read commands from file (use - for stdin)")
 	flag.Parse()
 
 	fn := *_fn
-	if fn != "" {
-		processFromFile(shell, fn)
+	if fn == "-" {
+		processStdin(shell, fn)
+	} else if fn != "" {
+		processFile(shell, fn)
 	} else if len(flag.Args()) > 1 {
 		shell.Process(flag.Args()...)
 	} else {
@@ -37,12 +39,25 @@ func main() {
 	shell.Close()
 }
 
-func processFromFile(shell *ishell.Shell, fn string) {
-	content, err := ioutil.ReadFile(fn)
+func processStdin(shell *ishell.Shell, fn string) {
+	data, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
-		shell.Println("Error reading from file.", err)
+		shell.Println("Error reading from stdin:", err)
+		os.Exit(1)
 	}
-	lines := strings.Split(string(content), "\n")
+	processData(shell, string(data))
+}
+
+func processFile(shell *ishell.Shell, fn string) {
+	data, err := ioutil.ReadFile(fn)
+	if err != nil {
+		shell.Println("Error reading from file:", err)
+	}
+	processData(shell, string(data))
+}
+
+func processData(shell *ishell.Shell, data string) {
+	lines := strings.Split(data, "\n")
 	for _, line := range lines {
 		if line == "" || string(line[0]) == "#" {
 			continue
