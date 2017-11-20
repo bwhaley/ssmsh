@@ -101,7 +101,7 @@ func putOptions(s string) bool {
 	return false
 }
 
-func validate(f string, v string) bool {
+func validate(f, v string) bool {
 	m := map[string]func(string) bool{
 		"type":        validateType,
 		"name":        validateName,
@@ -125,7 +125,7 @@ func validate(f string, v string) bool {
 func validateType(s string) bool {
 	validTypes := []string{"String", "StringList", "SecureString"}
 	for i := 0; i < len(validTypes); i++ {
-		if strings.EqualFold(s, validTypes[i]) {
+		if strings.EqualFold(s, validTypes[i]) { // Case insensitive validation of type field
 			putParamInput.Type = aws.String(validTypes[i])
 			return true
 		}

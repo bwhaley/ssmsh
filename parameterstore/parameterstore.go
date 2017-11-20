@@ -215,7 +215,7 @@ func (ps *ParameterStore) Put(param *ssm.PutParameterInput) (resp *ssm.PutParame
 }
 
 // Move moves a parameter or path to another location
-func (ps *ParameterStore) Move(src string, dst string) error {
+func (ps *ParameterStore) Move(src, dst string) error {
 	var err error
 	err = ps.Copy(src, dst, true)
 	if err != nil {
@@ -229,7 +229,7 @@ func (ps *ParameterStore) Move(src string, dst string) error {
 }
 
 // Copy duplicates a parameter from src to dst
-func (ps *ParameterStore) Copy(src string, dst string, recurse bool) error {
+func (ps *ParameterStore) Copy(src, dst string, recurse bool) error {
 	src = fqp(src, ps.Cwd)
 	dst = fqp(dst, ps.Cwd)
 	var srcIsParameter, dstIsParameter, srcIsPath, dstIsPath bool
@@ -263,7 +263,7 @@ func (ps *ParameterStore) Copy(src string, dst string, recurse bool) error {
 	return fmt.Errorf("%s or %s is not a path or parameter", src, dst)
 }
 
-func (ps *ParameterStore) copyParameter(src string, dst string) error {
+func (ps *ParameterStore) copyParameter(src, dst string) error {
 	if !ps.isParameter(src) {
 		return errors.New("source must be a parameter: " + src)
 	}
@@ -288,13 +288,13 @@ func (ps *ParameterStore) copyParameter(src string, dst string) error {
 	return nil
 }
 
-func (ps *ParameterStore) copyParameterToPath(srcParam string, dstPath string) error {
+func (ps *ParameterStore) copyParameterToPath(srcParam, dstPath string) error {
 	srcParamElements := strings.Split(srcParam, Delimiter)
 	dstParam := dstPath + Delimiter + srcParamElements[len(srcParamElements)-1]
 	return ps.copyParameter(srcParam, dstParam)
 }
 
-func (ps *ParameterStore) copyPathToPath(srcPath string, dstPath string) error {
+func (ps *ParameterStore) copyPathToPath(srcPath, dstPath string) error {
 	/*
 		1) Get all source parameters
 		2) Map sources to destinations
@@ -325,7 +325,7 @@ func (ps *ParameterStore) copyPathToPath(srcPath string, dstPath string) error {
 }
 
 // makeParameterMap returns a map of source param name to dest param name
-func makeParameterMap(params []*ssm.Parameter, srcPath string, dstPath string) map[string]string {
+func makeParameterMap(params []*ssm.Parameter, srcPath, dstPath string) map[string]string {
 	/*
 		sample input:
 			params: [/House/Stark/JonSnow /House/Stark/Special/Bran]
