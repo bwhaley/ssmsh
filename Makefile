@@ -48,9 +48,9 @@ vendor: $(DEP)
 build:
 	go build -i -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE) $(PROJECT)
 build-linux:
-	CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -i -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE)-linux-amd64 $(PROJECT)
+	GOOS=linux GOARCH=amd64 go build -o $(GOPATH)/bin/$(EXECUTABLE)-linux-amd64
 build-darwin:
-	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -a -installsuffix cgo -i -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE)-darwin-amd64 $(PROJECT)
+	GOOS=darwin GOARCH=amd64 go build -o $(GOPATH)/bin/$(EXECUTABLE)-darwin-amd64
 
 clean:
 	rm -f $(GOPATH)/bin/$(EXECUTABLE) $(GOPATH)/bin/$(EXECUTABLE)-*
