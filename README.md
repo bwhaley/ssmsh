@@ -52,7 +52,8 @@ Targaryen/
 
 ### Get parameter
 ```bash
-/>get /House/Stark/JonSnow
+/>cd /House/Stark
+/House/Stark>get JonSnow
 [{
   Name: "/House/Stark/JonSnow",
   Type: "String",
@@ -63,16 +64,17 @@ Targaryen/
 
 ### Get encrypted parameters
 ```bash
-/>get /House/Stark/VerySecretInformation
+/>cd /House/Stark
+/House/Stark>get VerySecretInformation
 [{
   Name: "/House/Stark/VerySecretInformation",
   Type: "SecureString",
   Value: "AQICAHhBW4N+....",
   Version: 1
 }]
-/>decrypt
+/House/Stark>decrypt
 Decrypt is true
-/>get /House/Stark/VerySecretInformation
+/House/Stark>get VerySecretInformation
 [{
   Name: "/House/Stark/VerySecretInformation",
   Type: "SecureString",
@@ -143,6 +145,7 @@ rm /House/Stark/RobStark
 cp -R /House/Baratheon /House/Lannister
 EOF
 $ pssh -file commands.txt
+$ cat commands.txt | pssh -file -  # Read commands from STDIN
 ```
 
 ###  Inline commands
