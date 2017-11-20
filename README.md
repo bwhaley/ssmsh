@@ -10,6 +10,8 @@ pssh is an interactive shell for the EC2 Parameter Store. Features:
 
 
 ## Installation
+For now: clone repo & build (or make).
+TBD
 1. `go get github.com/kountable/pssh`
 2. Set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
 
@@ -137,8 +139,9 @@ Alternatively:
 ###  Read commands in batches
 ```bash
 $ cat << EOF > commands.txt
-put name=/House/Targaryen/DaenerysTargaryen value="Queen" type=String description="Mother of Dragons"
-cp /House/Stark/JonSnow /House/Targaryen/JonSnow
+put name=/House/Targaryen/DaenerysTargaryen value="Khaleesi" type=String description="Mother of Dragons"
+rm /House/Stark/RobStark
+cp -R /House/Baratheon /House/Lannister
 EOF
 $ pssh -file commands.txt
 ```
