@@ -40,10 +40,13 @@ Stark/
 Targaryen/
 ```
 
-### Change dir
+### Change dir and list from current working dir
 ```bash
 />cd /House
-/House>
+/House>ls
+Lannister/
+Stark/
+Targaryen/
 ```
 
 ### Get parameter
@@ -72,7 +75,7 @@ Decrypt is true
 [{
   Name: "/House/Stark/VerySecretInformation",
   Type: "SecureString",
-  Value: "There is a King in the family.",
+  Value: "The three-eyed raven lives.",
   Version: 1
 }]
 ```
@@ -119,22 +122,22 @@ Decrypt is true
 /> put
 Input options. End with a blank line.
 ... name=/House/Targaryen/DaenerysTargaryen
-... value="Queen"
+... value="Khaleesi"
 ... type=String
-... description="Mother of Dragons and Queen of Westeros"
+... description="Mother of Dragons"
 ...
 />
 ```
 Alternatively:
 
 ```bash
-/> put name=/House/Targaryen/DaenerysTargaryen value="Queen" type=String description="Mother of Dragons and Queen of Westeros"
+/> put name=/House/Targaryen/DaenerysTargaryen value="Khaleesi" type=String description="Mother of Dragons"
 ```
 
 ###  Read commands in batches
 ```bash
 $ cat << EOF > commands.txt
-put name=/House/Targaryen/DaenerysTargaryen value="Queen" type=String description="Mother of Dragons and Queen of Westeros"
+put name=/House/Targaryen/DaenerysTargaryen value="Queen" type=String description="Mother of Dragons"
 cp /House/Stark/JonSnow /House/Targaryen/JonSnow
 EOF
 $ pssh -file commands.txt
@@ -155,6 +158,7 @@ $ pssh put name=/House/Lannister/CerseiLannister value="Noble" description="Daug
 * [ ] Export/import
 * [ ] Support globbing and/or regex
 * [ ] In memory parameter cache
+* [ ] Read parameters as local env variables
 
 
 ## License
