@@ -10,9 +10,8 @@ pssh is an interactive shell for the EC2 Parameter Store. Features:
 
 
 ## Installation
-For now: clone repo & build (or make).
-TBD
-1. `go get github.com/kountable/pssh`
+
+1. Download [here](https://github.com/kountable/pssh/releases) or clone and build from this repo.
 2. Set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
 
 ## Usage
