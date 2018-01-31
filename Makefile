@@ -1,8 +1,8 @@
 SHELL := /bin/bash
-PROJECT := github.com/kountable/pssh
+PROJECT := github.com/kountable/ssmsh
 PKGS := $(shell go list ./... | grep -v /vendor)
-EXECUTABLE := pssh
-PKG := pssh
+EXECUTABLE := ssmsh
+PKG := ssmsh
 DOCKER_REGISTRY := jgeiger
 DOCKER_IMAGE_NAME := example
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null)

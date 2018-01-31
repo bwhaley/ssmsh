@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/abiosoft/ishell"
-	"github.com/kountable/pssh/parameterstore"
+	"github.com/kountable/ssmsh/parameterstore"
 )
 
 type fn func(*ishell.Context)
@@ -12,7 +12,7 @@ type fn func(*ishell.Context)
 var shell *ishell.Shell
 var ps *parameterstore.ParameterStore
 
-// Init initializes the pssh subcommands
+// Init initializes the ssmsh subcommands
 func Init(_shell *ishell.Shell, _ps *parameterstore.ParameterStore) {
 	shell = _shell
 	ps = _ps

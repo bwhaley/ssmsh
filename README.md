@@ -1,5 +1,5 @@
-# pssh
-pssh is an interactive shell for the EC2 Parameter Store. Features:
+# ssmsh
+ssmsh is an interactive shell for the EC2 Parameter Store. Features:
 * Interact with the parameter store hierarchy using familiar commands like cd, ls, cp, mv, and rm
 * Recursively list, copy, and remove parameters
 * Get parameter history
@@ -11,7 +11,7 @@ pssh is an interactive shell for the EC2 Parameter Store. Features:
 
 ## Installation
 
-1. Download [here](https://github.com/kountable/pssh/releases) or clone and build from this repo.
+1. Download [here](https://github.com/kountable/ssmsh/releases) or clone and build from this repo.
 2. Set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
 
 ## Usage
@@ -144,13 +144,13 @@ put name=/House/Targaryen/DaenerysTargaryen value="Khaleesi" type=String descrip
 rm /House/Stark/RobStark
 cp -R /House/Baratheon /House/Lannister
 EOF
-$ pssh -file commands.txt
-$ cat commands.txt | pssh -file -  # Read commands from STDIN
+$ ssmsh -file commands.txt
+$ cat commands.txt | ssmsh -file -  # Read commands from STDIN
 ```
 
 ###  Inline commands
 ```
-$ pssh put name=/House/Lannister/CerseiLannister value="Noble" description="Daughter of Tywin" type=string
+$ ssmsh put name=/House/Lannister/CerseiLannister value="Noble" description="Daughter of Tywin" type=string
 ```
 
 ## todo

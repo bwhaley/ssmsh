@@ -7,7 +7,7 @@ import (
 	"github.com/abiosoft/ishell"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/kountable/pssh/parameterstore"
+	"github.com/kountable/ssmsh/parameterstore"
 )
 
 // TODO Inline syntax
