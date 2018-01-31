@@ -26,7 +26,9 @@ type ParameterStore struct {
 
 // NewParameterStore initializes a ParameterStore with default values
 func (ps *ParameterStore) NewParameterStore() error {
-	sess := session.Must(session.NewSession())
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
 	ps.Confirm = false
 	ps.Cwd = Delimiter
 	ps.Decrypt = false
