@@ -33,7 +33,9 @@ func (ps *ParameterStore) NewParameterStore() error {
 	ps.Cwd = Delimiter
 	ps.Decrypt = false
 	ps.Client = ssm.New(sess)
-	_, err := ps.List(Delimiter, false)
+
+	// Check for a non-existent parameter to validate credentials & permissions
+	_, err := ps.Get([]string{Delimiter})
 	if err != nil {
 		return err
 	}
