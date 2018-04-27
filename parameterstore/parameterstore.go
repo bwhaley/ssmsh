@@ -57,18 +57,27 @@ func (ps *ParameterStore) SetCwd(path string) error {
 	return nil
 }
 
+// ListResult contains the results and error message from a call to List()
+type ListResult struct {
+	Result []string
+	Error  error
+}
+
 // List displays the parameters in a given path
 // Behavior is vaguely similar to UNIX ls
-func (ps *ParameterStore) List(path string, recurse bool) (r []string, err error) {
+func (ps *ParameterStore) List(path string, recurse bool, r chan ListResult) {
 	var pathParam string
 	path = fqp(path, ps.Cwd)
 	param, err := ps.Get([]string{path})
+	results := []string{}
 	if err != nil {
-		return nil, err
+		r <- ListResult{nil, err}
 	}
+
 	if len(param) == 1 {
 		pathParam = aws.StringValue(param[0].Name)
 	}
+
 	params := &ssm.GetParametersByPathInput{
 		Path:           aws.String(path),
 		Recursive:      aws.Bool(true),
@@ -77,23 +86,27 @@ func (ps *ParameterStore) List(path string, recurse bool) (r []string, err error
 	for {
 		resp, err := ps.Client.GetParametersByPath(params)
 		if err != nil {
-			return nil, err
+			r <- ListResult{nil, err}
 		}
 		for _, p := range resp.Parameters {
-			r = append(r, aws.StringValue(p.Name))
+			results = append(results, aws.StringValue(p.Name))
 		}
 		if aws.StringValue(resp.NextToken) == "" {
 			break
 		}
 		params.NextToken = resp.NextToken
 	}
+
 	if !recurse {
-		r = cull(r, path)
+		results = cull(results, path)
+
 	}
+
 	if pathParam != "" {
-		r = append(r, pathParam)
+		results = append(results, pathParam)
 	}
-	return r, nil
+
+	r <- ListResult{results, nil}
 }
 
 // Remove removes one or more parameters

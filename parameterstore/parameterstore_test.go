@@ -520,12 +520,18 @@ func TestList(t *testing.T) {
 			GetParametersResp:       c.GetParametersResp,
 		}
 		p.Cwd = parameterstore.Delimiter
-		resp, err := p.List(c.Query, c.Recurse)
-		if err != nil {
-			t.Fatal("unexpected error", err)
+
+		ch := make(chan parameterstore.ListResult, 0)
+		go func() {
+			p.List(c.Query, c.Recurse, ch)
+		}()
+
+		result := <-ch
+		if result.Error != nil {
+			t.Fatal("unexpected error", result.Error)
 		}
-		if !equal(resp, c.Expected) {
-			msg := fmt.Errorf("expected %v, got %v", c.Expected, resp)
+		if !equal(result.Result, c.Expected) {
+			msg := fmt.Errorf("expected %v, got %v", c.Expected, result.Result)
 			t.Fatal(msg)
 		}
 	}
