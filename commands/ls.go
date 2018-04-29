@@ -45,14 +45,10 @@ func ls(c *ishell.Context) {
 }
 
 func list(path string, recurse bool) ([]string, error) {
-	quit := make(chan bool)
-
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT)
-	go func() {
-		<-sigs
-	}()
 
+	quit := make(chan bool)
 	lr := make(chan parameterstore.ListResult, 0)
 	go func() {
 		ps.List(path, recurse, lr, quit)
