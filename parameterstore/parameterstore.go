@@ -65,28 +65,24 @@ type ListResult struct {
 
 // List displays the parameters in a given path
 // Behavior is vaguely similar to UNIX ls
-func (ps *ParameterStore) List(path string, recurse bool, r chan ListResult) {
-	var pathParam string
+func (ps *ParameterStore) List(path string, recurse bool, lr chan ListResult, quit chan bool) {
+	// Check for parameters under this path
 	path = fqp(path, ps.Cwd)
-	param, err := ps.Get([]string{path})
 	results := []string{}
-	if err != nil {
-		r <- ListResult{nil, err}
-	}
-
-	if len(param) == 1 {
-		pathParam = aws.StringValue(param[0].Name)
-	}
-
 	params := &ssm.GetParametersByPathInput{
 		Path:           aws.String(path),
 		Recursive:      aws.Bool(true),
 		WithDecryption: aws.Bool(ps.Decrypt),
 	}
 	for {
+		select {
+		case <-quit:
+			return
+		default:
+		}
 		resp, err := ps.Client.GetParametersByPath(params)
 		if err != nil {
-			r <- ListResult{nil, err}
+			lr <- ListResult{nil, err}
 		}
 		for _, p := range resp.Parameters {
 			results = append(results, aws.StringValue(p.Name))
@@ -96,17 +92,22 @@ func (ps *ParameterStore) List(path string, recurse bool, r chan ListResult) {
 		}
 		params.NextToken = resp.NextToken
 	}
-
 	if !recurse {
 		results = cull(results, path)
-
 	}
 
-	if pathParam != "" {
+	// Check if this path is a parameter (could be both path & parameter)
+	param, err := ps.Get([]string{path})
+	if err != nil {
+		lr <- ListResult{nil, err}
+		return
+	}
+	if len(param) == 1 {
+		pathParam := aws.StringValue(param[0].Name)
 		results = append(results, pathParam)
 	}
 
-	r <- ListResult{results, nil}
+	lr <- ListResult{results, nil}
 }
 
 // Remove removes one or more parameters

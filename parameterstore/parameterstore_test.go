@@ -522,12 +522,14 @@ func TestList(t *testing.T) {
 		p.Cwd = parameterstore.Delimiter
 
 		ch := make(chan parameterstore.ListResult, 0)
+		quit := make(chan bool)
 		go func() {
-			p.List(c.Query, c.Recurse, ch)
+			p.List(c.Query, c.Recurse, ch, quit)
 		}()
 
 		result := <-ch
 		if result.Error != nil {
+			quit <- true
 			t.Fatal("unexpected error", result.Error)
 		}
 		if !equal(result.Result, c.Expected) {

@@ -45,11 +45,7 @@ func ls(c *ishell.Context) {
 }
 
 func list(path string, recurse bool) ([]string, error) {
-	ch := make(chan parameterstore.ListResult, 0)
-
-	go func() {
-		ps.List(path, recurse, ch)
-	}()
+	quit := make(chan bool)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT)
@@ -57,13 +53,21 @@ func list(path string, recurse bool) ([]string, error) {
 		<-sigs
 	}()
 
+	lr := make(chan parameterstore.ListResult, 0)
+	go func() {
+		ps.List(path, recurse, lr, quit)
+	}()
+
 	select {
-	case result := <-ch:
+	case result := <-lr:
 		if result.Error != nil {
 			return nil, result.Error
 		}
 		return result.Result, nil
 	case <-sigs:
+		quit <- true
+		signal.Stop(sigs)
+		close(sigs)
 		return nil, nil
 	}
 }
