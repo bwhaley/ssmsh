@@ -1,6 +1,7 @@
 # ssmsh
 ssmsh is an interactive shell for the EC2 Parameter Store. Features:
 * Interact with the parameter store hierarchy using familiar commands like cd, ls, cp, mv, and rm
+* Supports relative paths and shorthand (`..`) syntax
 * Recursively list, copy, and remove parameters
 * Get parameter history
 * Create new parameters using put
@@ -119,6 +120,8 @@ Decrypt is true
 ### Remove parameters
 ```bash
 /> rm /House/Stark/EddardStark
+/> cd /House/Stark
+/House/Stark> rm -r ../Lannister
 ```
 
 ### Change active region
