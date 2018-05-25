@@ -21,14 +21,22 @@ type ParameterStore struct {
 	Cwd     string // The current working directory in the hierarchy
 	Decrypt bool   // Decrypt values retrieved from Get
 	Key     string // The KMS key to use for SecureString parameters
+	Region  string
 	Client  ssmiface.SSMAPI
 }
 
 // NewParameterStore initializes a ParameterStore with default values
 func (ps *ParameterStore) NewParameterStore() error {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
+	sess := session.Must(
+		session.NewSessionWithOptions(
+			session.Options{
+				SharedConfigState: session.SharedConfigEnable,
+				Config: aws.Config{
+					Region: aws.String(ps.Region),
+				},
+			},
+		),
+	)
 	ps.Confirm = false
 	ps.Cwd = Delimiter
 	ps.Decrypt = false

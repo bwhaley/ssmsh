@@ -31,6 +31,7 @@ Commands:
   ls           list parameters
   mv           move parameters
   put          set parameter
+  region       change region
   rm           remove parameters
 ```
 ### List contents of a path
@@ -118,6 +119,14 @@ Decrypt is true
 ### Remove parameters
 ```bash
 /> rm /House/Stark/EddardStark
+```
+
+### Change active region
+```bash
+/> region eu-west-3
+/> region
+eu-west-3
+/>
 ```
 
 ### Put new parameters

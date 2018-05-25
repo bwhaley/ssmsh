@@ -24,6 +24,7 @@ func Init(_shell *ishell.Shell, _ps *parameterstore.ParameterStore) {
 	registerCommand("ls", "list parameters", ls, lsUsage)
 	registerCommand("mv", "move parameters", mv, mvUsage)
 	registerCommand("put", "set parameter", put, putUsage)
+	registerCommand("region", "change region", region, regionUsage)
 	registerCommand("rm", "remove parameters", rm, rmUsage)
 	setPrompt(parameterstore.Delimiter)
 }
