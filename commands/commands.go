@@ -55,3 +55,26 @@ func checkRecursion(paths []string) ([]string, bool) {
 	}
 	return paths, false
 }
+
+func parsePath(path string) (parameterPath parameterstore.ParameterPath) {
+	var pathParts []string
+	pathParts = strings.Split(path, ":")
+	switch len(pathParts) {
+	case 1:
+		parameterPath.Name = pathParts[0]
+		parameterPath.Region = ps.Region
+	case 2:
+		parameterPath.Region = pathParts[0]
+		parameterPath.Name = pathParts[1]
+	}
+	ps.InitClient(parameterPath.Region)
+	return parameterPath
+}
+
+func groupByRegion(params []parameterstore.ParameterPath) map[string][]string {
+	paramsByRegion := make(map[string][]string)
+	for _, p := range params {
+		paramsByRegion[p.Region] = append(paramsByRegion[p.Region], p.Name)
+	}
+	return paramsByRegion
+}

@@ -10,7 +10,7 @@ Move parameter from src to dst.
 `
 
 func mv(c *ishell.Context) {
-	err := ps.Move(c.Args[0], c.Args[1])
+	err := ps.Move(parsePath(c.Args[0]), parsePath(c.Args[1]))
 	if err != nil {
 		shell.Println(err)
 	}

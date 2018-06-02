@@ -2,6 +2,7 @@ package commands
 
 import (
 	"github.com/abiosoft/ishell"
+	"github.com/kountable/ssmsh/parameterstore"
 )
 
 const rmUsage string = `
@@ -16,9 +17,13 @@ Example usage:
 
 func rm(c *ishell.Context) {
 	var err error
+	var parameterPaths []parameterstore.ParameterPath
 	paths, recurse := checkRecursion(c.Args)
 	if len(paths) >= 1 {
-		err = ps.Remove(paths, recurse)
+		for _, p := range paths {
+			parameterPaths = append(parameterPaths, parsePath(p))
+		}
+		err = ps.Remove(parameterPaths, recurse)
 		if err != nil {
 			shell.Println("Error: ", err)
 		}

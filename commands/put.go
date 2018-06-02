@@ -29,6 +29,7 @@ Example of multiline put:
 `
 
 var putParamInput ssm.PutParameterInput
+var putParamRegion string
 
 // Add or update parameters
 func put(c *ishell.Context) {
@@ -50,7 +51,10 @@ func put(c *ishell.Context) {
 		shell.Println("Error: name, type and value are required.")
 		return
 	}
-	resp, err = ps.Put(&putParamInput)
+	if putParamRegion == "" {
+		putParamRegion = ps.Region
+	}
+	resp, err = ps.Put(&putParamInput, putParamRegion)
 	if err != nil {
 		shell.Println("Error: ", err)
 	} else {
@@ -110,6 +114,7 @@ func validate(f, v string) bool {
 		"key":         validateKey,
 		"pattern":     validatePattern,
 		"overwrite":   validateOverwrite,
+		"region":      validateRegion,
 	}
 	if validator, ok := m[strings.ToLower(f)]; ok {
 		if validator(v) {
@@ -170,5 +175,10 @@ func validateOverwrite(s string) bool {
 		return false
 	}
 	putParamInput.Overwrite = aws.Bool(overwrite)
+	return true
+}
+
+func validateRegion(s string) bool {
+	putParamRegion = s
 	return true
 }

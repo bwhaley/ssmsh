@@ -51,7 +51,8 @@ func list(path string, recurse bool) ([]string, error) {
 	quit := make(chan bool)
 	lr := make(chan parameterstore.ListResult, 0)
 	go func() {
-		ps.List(path, recurse, lr, quit)
+		parameterPath := parsePath(path)
+		ps.List(parameterPath, recurse, lr, quit)
 	}()
 
 	select {
@@ -64,6 +65,7 @@ func list(path string, recurse bool) ([]string, error) {
 		quit <- true
 		signal.Stop(sigs)
 		close(sigs)
+		close(lr)
 		return nil, nil
 	}
 }

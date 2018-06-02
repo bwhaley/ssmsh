@@ -18,7 +18,7 @@ func cd(c *ishell.Context) {
 		// noop
 	} else if len(c.Args) == 1 {
 		path := c.Args[0]
-		err = ps.SetCwd(path)
+		err = ps.SetCwd(parsePath(path))
 		if err != nil {
 			shell.Println("Error:", err)
 		} else {

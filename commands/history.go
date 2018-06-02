@@ -17,7 +17,7 @@ func history(c *ishell.Context) {
 		shell.Println(historyUsage)
 		return
 	}
-	resp, err := ps.GetHistory(c.Args[0])
+	resp, err := ps.GetHistory(parsePath(c.Args[0]))
 	if err != nil {
 		shell.Println("Error: ", err)
 	} else {

@@ -118,7 +118,7 @@ func TestPut(t *testing.T) {
 	var p parameterstore.ParameterStore
 	p.NewParameterStore()
 	p.Cwd = parameterstore.Delimiter
-	p.Client = mockedSSM{
+	p.Clients[p.Region] = mockedSSM{
 		PutParameterResp: ssm.PutParameterOutput{
 			Version: aws.Int64(expectedVersion),
 		},
@@ -129,7 +129,7 @@ func TestPut(t *testing.T) {
 		Description: aws.String("Lord of Winterfell in Season 1"),
 		Type:        aws.String("String"),
 	}
-	resp, err := p.Put(&putParameterInput)
+	resp, err := p.Put(&putParameterInput, p.Region)
 	if err != nil {
 		t.Fatal("Error putting parameter", err)
 	} else {
@@ -141,23 +141,30 @@ func TestPut(t *testing.T) {
 }
 
 func TestMoveParameter(t *testing.T) {
-	srcParam := "/House/Stark/SansaStark"
-	dstParam := "/House/Lannister/SansaStark"
+	srcParam := parameterstore.ParameterPath{
+		Name:   "/House/Stark/SansaStark",
+		Region: "region",
+	}
+	dstParam := parameterstore.ParameterPath{
+		Name:   "/House/Lannister/SansaStark",
+		Region: "region",
+	}
 	var p parameterstore.ParameterStore
+	p.Region = "region"
 	p.NewParameterStore()
 	p.Cwd = parameterstore.Delimiter
-	p.Client = mockedSSM{
+	p.Clients[p.Region] = mockedSSM{
 		GetParameterResp: []ssm.GetParameterOutput{
 			{
 				Parameter: &ssm.Parameter{
-					Name:  aws.String(srcParam),
+					Name:  aws.String(srcParam.Name),
 					Type:  aws.String("String"),
 					Value: aws.String("Noble"),
 				},
 			},
 			{
 				Parameter: &ssm.Parameter{
-					Name:  aws.String(dstParam),
+					Name:  aws.String(dstParam.Name),
 					Type:  aws.String("String"),
 					Value: aws.String("Noble"),
 				},
@@ -166,14 +173,14 @@ func TestMoveParameter(t *testing.T) {
 		GetParameterHistoryResp: ssm.GetParameterHistoryOutput{
 			Parameters: []*ssm.ParameterHistory{
 				{
-					Name:        aws.String(srcParam),
+					Name:        aws.String(srcParam.Name),
 					Value:       aws.String("Noble"),
 					Type:        aws.String("String"),
 					Description: aws.String("Eldest daughter of House Stark, bethrothed to Tyrion Lannister"),
 					Version:     aws.Int64(2),
 				},
 				{
-					Name:        aws.String(srcParam),
+					Name:        aws.String(srcParam.Name),
 					Value:       aws.String("Noble"),
 					Type:        aws.String("String"),
 					Description: aws.String("Eldest daughter of House Stark"),
@@ -186,44 +193,51 @@ func TestMoveParameter(t *testing.T) {
 	if err != nil {
 		t.Fatal("Error moving parameter", err)
 	}
-	p.Client = mockedSSM{
+	p.Clients[p.Region] = mockedSSM{
 		GetParameterResp: []ssm.GetParameterOutput{
 			{
 				Parameter: &ssm.Parameter{
-					Name:  aws.String(dstParam),
+					Name:  aws.String(dstParam.Name),
 					Type:  aws.String("String"),
 					Value: aws.String("Noble"),
 				},
 			},
 		},
 	}
-	resp, err := p.Get([]string{srcParam})
+	resp, err := p.Get([]string{srcParam.Name}, p.Region)
 	if err != nil {
-		msg := fmt.Errorf("Error getting %s: %s", srcParam, err)
+		msg := fmt.Errorf("Error getting %s: %s", srcParam.Name, err)
 		t.Fatal(msg)
 	}
 	if len(resp) > 0 {
 		if err != nil {
-			msg := fmt.Errorf("Expected parameter %s to be removed but found %v", srcParam, resp)
+			msg := fmt.Errorf("Expected parameter %s to be removed but found %v", srcParam.Name, resp)
 			t.Fatal(msg)
 		}
 	}
-	_, err = p.Get([]string{dstParam})
+	_, err = p.Get([]string{dstParam.Name}, p.Region)
 	if err != nil {
-		msg := fmt.Errorf("Expected to find %s but didn't!", dstParam)
+		msg := fmt.Errorf("Expected to find %s but didn't!", dstParam.Name)
 		t.Fatal(msg)
 	}
 }
 
 func TestCopyPath(t *testing.T) {
-	srcPath := "/House/Stark"
-	dstPath := "/House/Targaryen"
+	srcPath := parameterstore.ParameterPath{
+		Name:   "/House/Stark",
+		Region: "region",
+	}
+	dstPath := parameterstore.ParameterPath{
+		Name:   "/House/Targaryen",
+		Region: "region",
+	}
 
 	var p parameterstore.ParameterStore
+	p.Region = "region"
 	p.NewParameterStore()
 	p.Cwd = parameterstore.Delimiter
 	bothHouses := append(HouseStark, HouseTargaryen...)
-	p.Client = mockedSSM{
+	p.Clients[p.Region] = mockedSSM{
 		GetParameterResp: []ssm.GetParameterOutput{
 			{Parameter: EddardStark},
 			{Parameter: CatelynStark},
@@ -253,7 +267,10 @@ func TestCopyPath(t *testing.T) {
 	if err != nil {
 		t.Fatal("Error copying parameter path: ", err)
 	}
-	expectedName := "/House/Targaryen/Stark/EddardStark"
+	expectedName := parameterstore.ParameterPath{
+		Name:   "/House/Targaryen/Stark/EddardStark",
+		Region: "region",
+	}
 	resp, err := p.GetHistory(expectedName)
 	if err != nil {
 		t.Fatal("Error getting history: ", err)
@@ -265,12 +282,19 @@ func TestCopyPath(t *testing.T) {
 }
 
 func TestCopyParameter(t *testing.T) {
-	srcParam := "/House/Stark/JonSnow"
-	dstParam := "/House/Targaryen/JonSnow"
+	srcParam := parameterstore.ParameterPath{
+		Name:   "/House/Stark/JonSnow",
+		Region: "region",
+	}
+	dstParam := parameterstore.ParameterPath{
+		Name:   "/House/Targaryen/JonSnow",
+		Region: "region",
+	}
 	var p parameterstore.ParameterStore
+	p.Region = "region"
 	p.NewParameterStore()
 	p.Cwd = parameterstore.Delimiter
-	p.Client = mockedSSM{
+	p.Clients[p.Region] = mockedSSM{
 		GetParameterResp: []ssm.GetParameterOutput{
 			{
 				Parameter: &ssm.Parameter{
@@ -310,13 +334,16 @@ func TestCopyParameter(t *testing.T) {
 	if err != nil {
 		t.Fatal("Error copying parameter", err)
 	}
-	resp, err := p.Get([]string{dstParam})
+	resp, err := p.Get([]string{dstParam.Name}, p.Region)
 	if err != nil {
 		t.Fatal("Error getting parameter", err)
 	}
-	expectedName := "/House/Targaryen/JonSnow"
-	if aws.StringValue(resp[0].Name) != expectedName {
-		msg := fmt.Errorf("expected %s, got %s", expectedName, aws.StringValue(resp[0].Name))
+	expectedName := parameterstore.ParameterPath{
+		Name:   "/House/Targaryen/JonSnow",
+		Region: "region",
+	}
+	if aws.StringValue(resp[0].Name) != expectedName.Name {
+		msg := fmt.Errorf("expected %s, got %s", expectedName.Name, aws.StringValue(resp[0].Name))
 		t.Fatal(msg)
 	}
 }
@@ -350,11 +377,12 @@ func TestCwd(t *testing.T) {
 	var p parameterstore.ParameterStore
 	for _, c := range cases {
 		p.NewParameterStore()
+		p.Region = "region"
 		p.Cwd = parameterstore.Delimiter
-		p.Client = mockedSSM{
+		p.Clients[p.Region] = mockedSSM{
 			GetParametersByPathResp: c.GetParametersByPathResp,
 		}
-		err := p.SetCwd(c.Path)
+		err := p.SetCwd(parameterstore.ParameterPath{Name: c.Path, Region: "region"})
 		if err != nil {
 			t.Fatal("unexpected error", err)
 		}
@@ -366,7 +394,10 @@ func TestCwd(t *testing.T) {
 
 	p.NewParameterStore()
 	p.Cwd = parameterstore.Delimiter
-	testDir := "/nodir"
+	testDir := parameterstore.ParameterPath{
+		Name:   "/nodir",
+		Region: "region",
+	}
 	err := p.SetCwd(testDir)
 	if err == nil {
 		msg := fmt.Errorf("Expected error for dir %s, got cwd %s ", testDir, p.Cwd)
@@ -375,10 +406,19 @@ func TestCwd(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
-	testParams := []string{
-		"/House/Stark/EddardStark",
-		"/House/Stark/CatelynStark",
-		"/House/Stark/TyrionLannister",
+	testParams := []parameterstore.ParameterPath{
+		{
+			Name:   "/House/Stark/EddardStark",
+			Region: "region",
+		},
+		{
+			Name:   "/House/Stark/CatelynStark",
+			Region: "region",
+		},
+		{
+			Name:   "/House/Stark/TyrionLannister",
+			Region: "region",
+		},
 	}
 	deleteParametersOutput := ssm.DeleteParametersOutput{
 		DeletedParameters: []*string{
@@ -391,8 +431,9 @@ func TestDelete(t *testing.T) {
 	}
 
 	var p parameterstore.ParameterStore
+	p.Region = "region"
 	p.NewParameterStore()
-	p.Client = mockedSSM{
+	p.Clients[p.Region] = mockedSSM{
 		DeleteParametersResp: deleteParametersOutput,
 	}
 	err := p.Remove(testParams, false)
@@ -403,7 +444,10 @@ func TestDelete(t *testing.T) {
 }
 
 func TestGetHistory(t *testing.T) {
-	testParam := "/House/Stark/EddardStark"
+	testParam := parameterstore.ParameterPath{
+		Name:   "/House/Stark/EddardStark",
+		Region: "region",
+	}
 	getHistoryOutput := ssm.GetParameterHistoryOutput{
 		Parameters: []*ssm.ParameterHistory{
 			{
@@ -418,8 +462,9 @@ func TestGetHistory(t *testing.T) {
 		NextToken: aws.String(""),
 	}
 	var p parameterstore.ParameterStore
+	p.Region = "region"
 	p.NewParameterStore()
-	p.Client = mockedSSM{
+	p.Clients[p.Region] = mockedSSM{
 		GetParameterHistoryResp: getHistoryOutput,
 	}
 	resp, err := p.GetHistory(testParam)
@@ -435,7 +480,7 @@ func TestGetHistory(t *testing.T) {
 
 func TestList(t *testing.T) {
 	cases := []struct {
-		Query                   string
+		Query                   parameterstore.ParameterPath
 		GetParametersByPathResp ssm.GetParametersByPathOutput
 		GetParametersResp       ssm.GetParametersOutput
 		GetParametersByPathNext ssm.GetParametersByPathOutput
@@ -443,7 +488,10 @@ func TestList(t *testing.T) {
 		Recurse                 bool
 	}{
 		{
-			Query:   "/House/Stark/EddardStark",
+			Query: parameterstore.ParameterPath{
+				Name:   "/House/Stark/EddardStark",
+				Region: "region",
+			},
 			Recurse: false,
 			GetParametersByPathResp: ssm.GetParametersByPathOutput{
 				Parameters: []*ssm.Parameter{},
@@ -462,7 +510,10 @@ func TestList(t *testing.T) {
 				},
 			},
 		}, {
-			Query:   "/",
+			Query: parameterstore.ParameterPath{
+				Name:   "/",
+				Region: "region",
+			},
 			Recurse: false,
 			Expected: []string{
 				"root",
@@ -478,7 +529,10 @@ func TestList(t *testing.T) {
 			},
 		},
 		{
-			Query:   "/House/Stark",
+			Query: parameterstore.ParameterPath{
+				Name:   "/House/Stark",
+				Region: "region",
+			},
 			Recurse: false,
 			GetParametersByPathResp: ssm.GetParametersByPathOutput{
 				Parameters: HouseStark,
@@ -491,7 +545,10 @@ func TestList(t *testing.T) {
 			},
 		},
 		{
-			Query:   "/House/",
+			Query: parameterstore.ParameterPath{
+				Name:   "/House/",
+				Region: "region",
+			},
 			Recurse: true,
 			GetParametersByPathResp: ssm.GetParametersByPathOutput{
 				Parameters: HouseStark,
@@ -513,8 +570,9 @@ func TestList(t *testing.T) {
 
 	for _, c := range cases {
 		var p parameterstore.ParameterStore
+		p.Region = "region"
 		p.NewParameterStore()
-		p.Client = mockedSSM{
+		p.Clients[p.Region] = mockedSSM{
 			GetParametersByPathResp: c.GetParametersByPathResp,
 			GetParametersByPathNext: c.GetParametersByPathNext,
 			GetParametersResp:       c.GetParametersResp,

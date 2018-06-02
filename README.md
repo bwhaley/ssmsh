@@ -2,6 +2,7 @@
 ssmsh is an interactive shell for the EC2 Parameter Store. Features:
 * Interact with the parameter store hierarchy using familiar commands like cd, ls, cp, mv, and rm
 * Supports relative paths and shorthand (`..`) syntax
+* Operate on parameters between regions
 * Recursively list, copy, and remove parameters
 * Get parameter history
 * Create new parameters using put
@@ -109,7 +110,7 @@ Decrypt is true
 
 ### Copy a parameter
 ```bash
-/>cp /House/Stark/SansaStark /House/Lannister/SansaStark
+/> cp /House/Stark/SansaStark /House/Lannister/SansaStark
 ```
 
 ### Copy an entire hierarchy
@@ -122,14 +123,6 @@ Decrypt is true
 /> rm /House/Stark/EddardStark
 /> cd /House/Stark
 /House/Stark> rm -r ../Lannister
-```
-
-### Change active region
-```bash
-/> region eu-west-3
-/> region
-eu-west-3
-/>
 ```
 
 ### Put new parameters
@@ -147,6 +140,22 @@ Alternatively:
 
 ```bash
 /> put name=/House/Targaryen/DaenerysTargaryen value="Khaleesi" type=String description="Mother of Dragons"
+```
+
+### Change active region
+```bash
+/> region eu-central-1
+/> region
+eu-central-1
+/>
+```
+
+### Operate on other regions
+
+```bash
+/> put region=eu-central-1 name=/House/Targaryen/DaenerysTargaryen value="Khaleesi" type=String description="Mother of Dragons"
+/> cp -r us-west-2:/House/Stark/ eu-central-1:/House/Targaryen
+/> get eu-central-1:/House/Stark/JonSnow us-west-2:/House/Stark/JonSnow
 ```
 
 ###  Read commands in batches
