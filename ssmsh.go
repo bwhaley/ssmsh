@@ -13,7 +13,18 @@ import (
 	"github.com/mattn/go-shellwords"
 )
 
+const version = "1.2.2"
+
 func main() {
+	_fn := flag.String("file", "", "Read commands from file (use - for stdin)")
+	_version := flag.Bool("version", false, "Print the current version")
+	flag.Parse()
+
+	if *_version {
+		fmt.Println("Version", version)
+		os.Exit(0)
+	}
+
 	shell := ishell.New()
 	var ps parameterstore.ParameterStore
 	err := ps.NewParameterStore()
@@ -22,9 +33,6 @@ func main() {
 		os.Exit(1)
 	}
 	commands.Init(shell, &ps)
-
-	_fn := flag.String("file", "", "Read commands from file (use - for stdin)")
-	flag.Parse()
 
 	fn := *_fn
 	if fn == "-" {
