@@ -317,14 +317,14 @@ func (ps *ParameterStore) Copy(src, dst ParameterPath, recurse bool) error {
 	} else if srcIsParameter && dstIsPath {
 		return ps.copyParameterToPath(src, dst)
 	} else if srcIsPath && dstIsParameter {
-		return fmt.Errorf("%s is a path (not copied)", src)
+		return fmt.Errorf("Cannot copy path (%s) to parameter (%s)", src, dst)
 	} else if srcIsPath {
 		if recurse {
 			return ps.copyPathToPath(src, dst)
 		}
 		return fmt.Errorf("%s and %s are both paths but recursion not requested. Use -R", src, dst)
 	}
-	return fmt.Errorf("%s or %s is not a path or parameter", src, dst)
+	return fmt.Errorf("%s is not a path or parameter", src)
 }
 
 func (ps *ParameterStore) copyParameter(src, dst ParameterPath) error {
