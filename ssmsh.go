@@ -16,11 +16,12 @@ import (
 const version = "1.2.2"
 
 func main() {
+	var _version bool
 	_fn := flag.String("file", "", "Read commands from file (use - for stdin)")
-	_version := flag.Bool("version", false, "Print the current version")
+	flag.BoolVar(&_version, "version", false, "Display the current version")
 	flag.Parse()
 
-	if *_version {
+	if _version {
 		fmt.Println("Version", version)
 		os.Exit(0)
 	}
