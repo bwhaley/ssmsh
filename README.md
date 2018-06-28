@@ -190,6 +190,21 @@ $ ssmsh put name=/House/Lannister/CerseiLannister value="Noble" description="Dau
 ## License
 MIT
 
+## Contributing/compiling
+1. Ensure you have at least go v1.10
+```
+$ go version
+go version go1.10 linux/amd64
+```
+2. Ensure your `$GOPATH` exists and is in your `$PATH`
+```
+export GOPATH=$HOME/go
+export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+```
+3. Run `go get github.com/kountable/ssmsh` 
+4. Run `cd $GOPATH/src/github.com/kountable/ssmsh && make` to build and install the binary to `$GOPATH/bin/ssmsh`
+
+
 ## Related tools
 [Chamber](https://github.com/segmentio/chamber) | A tool for managing secrets
 
