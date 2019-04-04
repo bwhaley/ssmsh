@@ -1,10 +1,8 @@
 SHELL := /bin/bash
-PROJECT := github.com/kountable/ssmsh
+PROJECT := github.com/bwhaley/ssmsh
 PKGS := $(shell go list ./... | grep -v /vendor)
 EXECUTABLE := ssmsh
 PKG := ssmsh
-DOCKER_REGISTRY := jgeiger
-DOCKER_IMAGE_NAME := example
 GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null)
 
 .PHONY: build test golint docs $(PROJECT) $(PKGS) vendor
