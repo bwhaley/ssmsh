@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/abiosoft/ishell"
-	"github.com/kountable/ssmsh/commands"
-	"github.com/kountable/ssmsh/parameterstore"
+	"github.com/bwhaley/ssmsh/commands"
+	"github.com/bwhaley/ssmsh/parameterstore"
 	"github.com/mattn/go-shellwords"
 )
 
-const version = "1.2.2"
+const version = "1.3"
 
 func main() {
 	var _version bool

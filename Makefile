@@ -7,9 +7,9 @@ GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null)
 
 .PHONY: build test golint docs $(PROJECT) $(PKGS) vendor
 
-GOVERSION := $(shell go version | grep 1.10)
+GOVERSION := $(shell go version | grep 1.12)
 ifeq "$(GOVERSION)" ""
-    $(error must be running Go version 1.10.x)
+    $(error must be running Go version 1.12.x)
 endif
 
 all: test build

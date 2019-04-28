@@ -13,7 +13,7 @@ ssmsh is an interactive shell for the EC2 Parameter Store. Features:
 
 ## Installation
 
-1. Download [here](https://github.com/kountable/ssmsh/releases) or clone and build from this repo.
+1. Download [here](https://github.com/bwhaley/ssmsh/releases) or clone and build from this repo.
 2. Set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
 
 ## Usage
@@ -139,7 +139,14 @@ Input options. End with a blank line.
 Alternatively:
 
 ```bash
-/> put name=/House/Targaryen/DaenerysTargaryen value="Khaleesi" type=String description="Mother of Dragons"
+/> put name=/House/Targaryen/Daenerys value="Khaleesi" type=String description="Mother of Dragons"
+```
+
+### Advanced parameters with policies
+```bash
+/> policy RobbStarkExpiration Expiration(Timestamp=2013-03-31T21:00:00.000Z)
+/> policy ReminderPolicy ExpirationNotification(Before=30,Unit=days) NoChangeNotification(After=7,Unit=days)
+/> put name=/House/Stark/Robb value="King in the North" type=String policies=[RobbStarkExpiration,ReminderPolicy]
 ```
 
 ### Change active region
@@ -201,8 +208,8 @@ go version go1.10 linux/amd64
 export GOPATH=$HOME/go
 export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 ```
-3. Run `go get github.com/kountable/ssmsh` 
-4. Run `cd $GOPATH/src/github.com/kountable/ssmsh && make` to build and install the binary to `$GOPATH/bin/ssmsh`
+3. Run `go get github.com/bwhaley/ssmsh`
+4. Run `cd $GOPATH/src/github.com/bwhaley/ssmsh && make` to build and install the binary to `$GOPATH/bin/ssmsh`
 
 
 ## Related tools

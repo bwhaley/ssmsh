@@ -6,6 +6,7 @@
     "jsonVersion":"1.1",
     "protocol":"json",
     "serviceFullName":"AWS Glue",
+    "serviceId":"Glue",
     "signatureVersion":"v4",
     "targetPrefix":"AWSGlue",
     "uid":"glue-2017-03-31"
@@ -25,7 +26,8 @@
         {"shape":"ResourceNumberLimitExceededException"},
         {"shape":"InternalServiceException"},
         {"shape":"EntityNotFoundException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "BatchDeleteConnection":{
@@ -86,6 +88,48 @@
         {"shape":"OperationTimeoutException"}
       ]
     },
+    "BatchGetCrawlers":{
+      "name":"BatchGetCrawlers",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"BatchGetCrawlersRequest"},
+      "output":{"shape":"BatchGetCrawlersResponse"},
+      "errors":[
+        {"shape":"InvalidInputException"},
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "BatchGetDevEndpoints":{
+      "name":"BatchGetDevEndpoints",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"BatchGetDevEndpointsRequest"},
+      "output":{"shape":"BatchGetDevEndpointsResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InvalidInputException"}
+      ]
+    },
+    "BatchGetJobs":{
+      "name":"BatchGetJobs",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"BatchGetJobsRequest"},
+      "output":{"shape":"BatchGetJobsResponse"},
+      "errors":[
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InvalidInputException"}
+      ]
+    },
     "BatchGetPartition":{
       "name":"BatchGetPartition",
       "http":{
@@ -98,7 +142,22 @@
         {"shape":"InvalidInputException"},
         {"shape":"EntityNotFoundException"},
         {"shape":"OperationTimeoutException"},
-        {"shape":"InternalServiceException"}
+        {"shape":"InternalServiceException"},
+        {"shape":"GlueEncryptionException"}
+      ]
+    },
+    "BatchGetTriggers":{
+      "name":"BatchGetTriggers",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"BatchGetTriggersRequest"},
+      "output":{"shape":"BatchGetTriggersResponse"},
+      "errors":[
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InvalidInputException"}
       ]
     },
     "BatchStopJobRun":{
@@ -141,7 +200,8 @@
         {"shape":"AlreadyExistsException"},
         {"shape":"InvalidInputException"},
         {"shape":"OperationTimeoutException"},
-        {"shape":"ResourceNumberLimitExceededException"}
+        {"shape":"ResourceNumberLimitExceededException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "CreateCrawler":{
@@ -172,7 +232,8 @@
         {"shape":"AlreadyExistsException"},
         {"shape":"ResourceNumberLimitExceededException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "CreateDevEndpoint":{
@@ -226,7 +287,8 @@
         {"shape":"ResourceNumberLimitExceededException"},
         {"shape":"InternalServiceException"},
         {"shape":"EntityNotFoundException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "CreateScript":{
@@ -243,6 +305,22 @@
         {"shape":"OperationTimeoutException"}
       ]
     },
+    "CreateSecurityConfiguration":{
+      "name":"CreateSecurityConfiguration",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"CreateSecurityConfigurationRequest"},
+      "output":{"shape":"CreateSecurityConfigurationResponse"},
+      "errors":[
+        {"shape":"AlreadyExistsException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"ResourceNumberLimitExceededException"}
+      ]
+    },
     "CreateTable":{
       "name":"CreateTable",
       "http":{
@@ -257,7 +335,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"ResourceNumberLimitExceededException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "CreateTrigger":{
@@ -292,7 +371,8 @@
         {"shape":"InternalServiceException"},
         {"shape":"EntityNotFoundException"},
         {"shape":"OperationTimeoutException"},
-        {"shape":"ResourceNumberLimitExceededException"}
+        {"shape":"ResourceNumberLimitExceededException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "DeleteClassifier":{
@@ -388,6 +468,37 @@
       },
       "input":{"shape":"DeletePartitionRequest"},
       "output":{"shape":"DeletePartitionResponse"},
+      "errors":[
+        {"shape":"EntityNotFoundException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "DeleteResourcePolicy":{
+      "name":"DeleteResourcePolicy",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"DeleteResourcePolicyRequest"},
+      "output":{"shape":"DeleteResourcePolicyResponse"},
+      "errors":[
+        {"shape":"EntityNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"ConditionCheckFailureException"}
+      ]
+    },
+    "DeleteSecurityConfiguration":{
+      "name":"DeleteSecurityConfiguration",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"DeleteSecurityConfigurationRequest"},
+      "output":{"shape":"DeleteSecurityConfigurationResponse"},
       "errors":[
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
@@ -503,7 +614,9 @@
       "output":{"shape":"GetConnectionResponse"},
       "errors":[
         {"shape":"EntityNotFoundException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetConnections":{
@@ -516,7 +629,9 @@
       "output":{"shape":"GetConnectionsResponse"},
       "errors":[
         {"shape":"EntityNotFoundException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetCrawler":{
@@ -556,6 +671,20 @@
         {"shape":"OperationTimeoutException"}
       ]
     },
+    "GetDataCatalogEncryptionSettings":{
+      "name":"GetDataCatalogEncryptionSettings",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"GetDataCatalogEncryptionSettingsRequest"},
+      "output":{"shape":"GetDataCatalogEncryptionSettingsResponse"},
+      "errors":[
+        {"shape":"InternalServiceException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
     "GetDatabase":{
       "name":"GetDatabase",
       "http":{
@@ -568,7 +697,8 @@
         {"shape":"InvalidInputException"},
         {"shape":"EntityNotFoundException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetDatabases":{
@@ -582,7 +712,8 @@
       "errors":[
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetDataflowGraph":{
@@ -716,7 +847,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetPartitions":{
@@ -731,7 +863,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"OperationTimeoutException"},
-        {"shape":"InternalServiceException"}
+        {"shape":"InternalServiceException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetPlan":{
@@ -743,6 +876,51 @@
       "input":{"shape":"GetPlanRequest"},
       "output":{"shape":"GetPlanResponse"},
       "errors":[
+        {"shape":"InvalidInputException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "GetResourcePolicy":{
+      "name":"GetResourcePolicy",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"GetResourcePolicyRequest"},
+      "output":{"shape":"GetResourcePolicyResponse"},
+      "errors":[
+        {"shape":"EntityNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InvalidInputException"}
+      ]
+    },
+    "GetSecurityConfiguration":{
+      "name":"GetSecurityConfiguration",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"GetSecurityConfigurationRequest"},
+      "output":{"shape":"GetSecurityConfigurationResponse"},
+      "errors":[
+        {"shape":"EntityNotFoundException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "GetSecurityConfigurations":{
+      "name":"GetSecurityConfigurations",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"GetSecurityConfigurationsRequest"},
+      "output":{"shape":"GetSecurityConfigurationsResponse"},
+      "errors":[
+        {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
         {"shape":"OperationTimeoutException"}
@@ -760,7 +938,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetTableVersion":{
@@ -775,7 +954,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetTableVersions":{
@@ -790,7 +970,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetTables":{
@@ -805,7 +986,23 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"OperationTimeoutException"},
-        {"shape":"InternalServiceException"}
+        {"shape":"InternalServiceException"},
+        {"shape":"GlueEncryptionException"}
+      ]
+    },
+    "GetTags":{
+      "name":"GetTags",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"GetTagsRequest"},
+      "output":{"shape":"GetTagsResponse"},
+      "errors":[
+        {"shape":"InvalidInputException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"EntityNotFoundException"}
       ]
     },
     "GetTrigger":{
@@ -850,7 +1047,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "GetUserDefinedFunctions":{
@@ -865,7 +1063,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"OperationTimeoutException"},
-        {"shape":"InternalServiceException"}
+        {"shape":"InternalServiceException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "ImportCatalogToGlue":{
@@ -879,6 +1078,93 @@
       "errors":[
         {"shape":"InternalServiceException"},
         {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "ListCrawlers":{
+      "name":"ListCrawlers",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"ListCrawlersRequest"},
+      "output":{"shape":"ListCrawlersResponse"},
+      "errors":[
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "ListDevEndpoints":{
+      "name":"ListDevEndpoints",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"ListDevEndpointsRequest"},
+      "output":{"shape":"ListDevEndpointsResponse"},
+      "errors":[
+        {"shape":"InvalidInputException"},
+        {"shape":"EntityNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "ListJobs":{
+      "name":"ListJobs",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"ListJobsRequest"},
+      "output":{"shape":"ListJobsResponse"},
+      "errors":[
+        {"shape":"InvalidInputException"},
+        {"shape":"EntityNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "ListTriggers":{
+      "name":"ListTriggers",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"ListTriggersRequest"},
+      "output":{"shape":"ListTriggersResponse"},
+      "errors":[
+        {"shape":"EntityNotFoundException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "PutDataCatalogEncryptionSettings":{
+      "name":"PutDataCatalogEncryptionSettings",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"PutDataCatalogEncryptionSettingsRequest"},
+      "output":{"shape":"PutDataCatalogEncryptionSettingsResponse"},
+      "errors":[
+        {"shape":"InternalServiceException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"OperationTimeoutException"}
+      ]
+    },
+    "PutResourcePolicy":{
+      "name":"PutResourcePolicy",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"PutResourcePolicyRequest"},
+      "output":{"shape":"PutResourcePolicyResponse"},
+      "errors":[
+        {"shape":"EntityNotFoundException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"ConditionCheckFailureException"}
       ]
     },
     "ResetJobBookmark":{
@@ -1006,6 +1292,36 @@
         {"shape":"ConcurrentModificationException"}
       ]
     },
+    "TagResource":{
+      "name":"TagResource",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"TagResourceRequest"},
+      "output":{"shape":"TagResourceResponse"},
+      "errors":[
+        {"shape":"InvalidInputException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"EntityNotFoundException"}
+      ]
+    },
+    "UntagResource":{
+      "name":"UntagResource",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"UntagResourceRequest"},
+      "output":{"shape":"UntagResourceResponse"},
+      "errors":[
+        {"shape":"InvalidInputException"},
+        {"shape":"InternalServiceException"},
+        {"shape":"OperationTimeoutException"},
+        {"shape":"EntityNotFoundException"}
+      ]
+    },
     "UpdateClassifier":{
       "name":"UpdateClassifier",
       "http":{
@@ -1032,7 +1348,9 @@
       "errors":[
         {"shape":"InvalidInputException"},
         {"shape":"EntityNotFoundException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "UpdateCrawler":{
@@ -1079,7 +1397,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "UpdateDevEndpoint":{
@@ -1126,7 +1445,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "UpdateTable":{
@@ -1143,7 +1463,8 @@
         {"shape":"InternalServiceException"},
         {"shape":"OperationTimeoutException"},
         {"shape":"ConcurrentModificationException"},
-        {"shape":"ResourceNumberLimitExceededException"}
+        {"shape":"ResourceNumberLimitExceededException"},
+        {"shape":"GlueEncryptionException"}
       ]
     },
     "UpdateTrigger":{
@@ -1174,7 +1495,8 @@
         {"shape":"EntityNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"InternalServiceException"},
-        {"shape":"OperationTimeoutException"}
+        {"shape":"OperationTimeoutException"},
+        {"shape":"GlueEncryptionException"}
       ]
     }
   },
@@ -1190,7 +1512,10 @@
       "type":"structure",
       "members":{
         "JobName":{"shape":"NameString"},
-        "Arguments":{"shape":"GenericMap"}
+        "Arguments":{"shape":"GenericMap"},
+        "Timeout":{"shape":"Timeout"},
+        "NotificationProperty":{"shape":"NotificationProperty"},
+        "SecurityConfiguration":{"shape":"NameString"}
       }
     },
     "ActionList":{
@@ -1316,6 +1641,48 @@
         "Errors":{"shape":"TableVersionErrors"}
       }
     },
+    "BatchGetCrawlersRequest":{
+      "type":"structure",
+      "required":["CrawlerNames"],
+      "members":{
+        "CrawlerNames":{"shape":"CrawlerNameList"}
+      }
+    },
+    "BatchGetCrawlersResponse":{
+      "type":"structure",
+      "members":{
+        "Crawlers":{"shape":"CrawlerList"},
+        "CrawlersNotFound":{"shape":"CrawlerNameList"}
+      }
+    },
+    "BatchGetDevEndpointsRequest":{
+      "type":"structure",
+      "required":["DevEndpointNames"],
+      "members":{
+        "DevEndpointNames":{"shape":"DevEndpointNames"}
+      }
+    },
+    "BatchGetDevEndpointsResponse":{
+      "type":"structure",
+      "members":{
+        "DevEndpoints":{"shape":"DevEndpointList"},
+        "DevEndpointsNotFound":{"shape":"DevEndpointNames"}
+      }
+    },
+    "BatchGetJobsRequest":{
+      "type":"structure",
+      "required":["JobNames"],
+      "members":{
+        "JobNames":{"shape":"JobNameList"}
+      }
+    },
+    "BatchGetJobsResponse":{
+      "type":"structure",
+      "members":{
+        "Jobs":{"shape":"JobList"},
+        "JobsNotFound":{"shape":"JobNameList"}
+      }
+    },
     "BatchGetPartitionRequest":{
       "type":"structure",
       "required":[
@@ -1342,6 +1709,20 @@
       "member":{"shape":"PartitionValueList"},
       "max":1000,
       "min":0
+    },
+    "BatchGetTriggersRequest":{
+      "type":"structure",
+      "required":["TriggerNames"],
+      "members":{
+        "TriggerNames":{"shape":"TriggerNameList"}
+      }
+    },
+    "BatchGetTriggersResponse":{
+      "type":"structure",
+      "members":{
+        "Triggers":{"shape":"TriggerList"},
+        "TriggersNotFound":{"shape":"TriggerNameList"}
+      }
     },
     "BatchStopJobRunError":{
       "type":"structure",
@@ -1399,6 +1780,13 @@
       "max":100,
       "min":0
     },
+    "CatalogEncryptionMode":{
+      "type":"string",
+      "enum":[
+        "DISABLED",
+        "SSE-KMS"
+      ]
+    },
     "CatalogEntries":{
       "type":"list",
       "member":{"shape":"CatalogEntry"}
@@ -1433,7 +1821,9 @@
       "type":"structure",
       "members":{
         "GrokClassifier":{"shape":"GrokClassifier"},
-        "XMLClassifier":{"shape":"XMLClassifier"}
+        "XMLClassifier":{"shape":"XMLClassifier"},
+        "JsonClassifier":{"shape":"JsonClassifier"},
+        "CsvClassifier":{"shape":"CsvClassifier"}
       }
     },
     "ClassifierList":{
@@ -1443,6 +1833,20 @@
     "ClassifierNameList":{
       "type":"list",
       "member":{"shape":"NameString"}
+    },
+    "CloudWatchEncryption":{
+      "type":"structure",
+      "members":{
+        "CloudWatchEncryptionMode":{"shape":"CloudWatchEncryptionMode"},
+        "KmsKeyArn":{"shape":"KmsKeyArn"}
+      }
+    },
+    "CloudWatchEncryptionMode":{
+      "type":"string",
+      "enum":[
+        "DISABLED",
+        "SSE-KMS"
+      ]
     },
     "CodeGenArgName":{"type":"string"},
     "CodeGenArgValue":{"type":"string"},
@@ -1549,6 +1953,13 @@
         "State":{"shape":"JobRunState"}
       }
     },
+    "ConditionCheckFailureException":{
+      "type":"structure",
+      "members":{
+        "Message":{"shape":"MessageString"}
+      },
+      "exception":true
+    },
     "ConditionList":{
       "type":"list",
       "member":{"shape":"Condition"}
@@ -1588,6 +1999,14 @@
       "member":{"shape":"Connection"}
     },
     "ConnectionName":{"type":"string"},
+    "ConnectionPasswordEncryption":{
+      "type":"structure",
+      "required":["ReturnConnectionPasswordEncrypted"],
+      "members":{
+        "ReturnConnectionPasswordEncrypted":{"shape":"Boolean"},
+        "AwsKmsKeyId":{"shape":"NameString"}
+      }
+    },
     "ConnectionProperties":{
       "type":"map",
       "key":{"shape":"ConnectionPropertyKey"},
@@ -1602,13 +2021,15 @@
         "PORT",
         "USERNAME",
         "PASSWORD",
+        "ENCRYPTED_PASSWORD",
         "JDBC_DRIVER_JAR_URI",
         "JDBC_DRIVER_CLASS_NAME",
         "JDBC_ENGINE",
         "JDBC_ENGINE_VERSION",
         "CONFIG_FILES",
         "INSTANCE_ID",
-        "JDBC_CONNECTION_URL"
+        "JDBC_CONNECTION_URL",
+        "JDBC_ENFORCE_SSL"
       ]
     },
     "ConnectionType":{
@@ -1642,7 +2063,8 @@
         "LastUpdated":{"shape":"Timestamp"},
         "LastCrawl":{"shape":"LastCrawlInfo"},
         "Version":{"shape":"VersionId"},
-        "Configuration":{"shape":"CrawlerConfiguration"}
+        "Configuration":{"shape":"CrawlerConfiguration"},
+        "CrawlerSecurityConfiguration":{"shape":"CrawlerSecurityConfiguration"}
       }
     },
     "CrawlerConfiguration":{"type":"string"},
@@ -1687,6 +2109,11 @@
       },
       "exception":true
     },
+    "CrawlerSecurityConfiguration":{
+      "type":"string",
+      "max":128,
+      "min":0
+    },
     "CrawlerState":{
       "type":"string",
       "enum":[
@@ -1706,14 +2133,17 @@
       "type":"structure",
       "members":{
         "S3Targets":{"shape":"S3TargetList"},
-        "JdbcTargets":{"shape":"JdbcTargetList"}
+        "JdbcTargets":{"shape":"JdbcTargetList"},
+        "DynamoDBTargets":{"shape":"DynamoDBTargetList"}
       }
     },
     "CreateClassifierRequest":{
       "type":"structure",
       "members":{
         "GrokClassifier":{"shape":"CreateGrokClassifierRequest"},
-        "XMLClassifier":{"shape":"CreateXMLClassifierRequest"}
+        "XMLClassifier":{"shape":"CreateXMLClassifierRequest"},
+        "JsonClassifier":{"shape":"CreateJsonClassifierRequest"},
+        "CsvClassifier":{"shape":"CreateCsvClassifierRequest"}
       }
     },
     "CreateClassifierResponse":{
@@ -1752,12 +2182,27 @@
         "Classifiers":{"shape":"ClassifierNameList"},
         "TablePrefix":{"shape":"TablePrefix"},
         "SchemaChangePolicy":{"shape":"SchemaChangePolicy"},
-        "Configuration":{"shape":"CrawlerConfiguration"}
+        "Configuration":{"shape":"CrawlerConfiguration"},
+        "CrawlerSecurityConfiguration":{"shape":"CrawlerSecurityConfiguration"},
+        "Tags":{"shape":"TagsMap"}
       }
     },
     "CreateCrawlerResponse":{
       "type":"structure",
       "members":{
+      }
+    },
+    "CreateCsvClassifierRequest":{
+      "type":"structure",
+      "required":["Name"],
+      "members":{
+        "Name":{"shape":"NameString"},
+        "Delimiter":{"shape":"CsvColumnDelimiter"},
+        "QuoteSymbol":{"shape":"CsvQuoteSymbol"},
+        "ContainsHeader":{"shape":"CsvHeaderOption"},
+        "Header":{"shape":"CsvHeader"},
+        "DisableValueTrimming":{"shape":"NullableBoolean"},
+        "AllowSingleColumn":{"shape":"NullableBoolean"}
       }
     },
     "CreateDatabaseRequest":{
@@ -1777,8 +2222,7 @@
       "type":"structure",
       "required":[
         "EndpointName",
-        "RoleArn",
-        "PublicKey"
+        "RoleArn"
       ],
       "members":{
         "EndpointName":{"shape":"GenericString"},
@@ -1786,9 +2230,13 @@
         "SecurityGroupIds":{"shape":"StringList"},
         "SubnetId":{"shape":"GenericString"},
         "PublicKey":{"shape":"GenericString"},
+        "PublicKeys":{"shape":"PublicKeysList"},
         "NumberOfNodes":{"shape":"IntegerValue"},
         "ExtraPythonLibsS3Path":{"shape":"GenericString"},
-        "ExtraJarsS3Path":{"shape":"GenericString"}
+        "ExtraJarsS3Path":{"shape":"GenericString"},
+        "SecurityConfiguration":{"shape":"NameString"},
+        "Tags":{"shape":"TagsMap"},
+        "Arguments":{"shape":"MapValue"}
       }
     },
     "CreateDevEndpointResponse":{
@@ -1807,7 +2255,9 @@
         "ExtraPythonLibsS3Path":{"shape":"GenericString"},
         "ExtraJarsS3Path":{"shape":"GenericString"},
         "FailureReason":{"shape":"GenericString"},
-        "CreatedTimestamp":{"shape":"TimestampValue"}
+        "SecurityConfiguration":{"shape":"NameString"},
+        "CreatedTimestamp":{"shape":"TimestampValue"},
+        "Arguments":{"shape":"MapValue"}
       }
     },
     "CreateGrokClassifierRequest":{
@@ -1841,13 +2291,35 @@
         "DefaultArguments":{"shape":"GenericMap"},
         "Connections":{"shape":"ConnectionsList"},
         "MaxRetries":{"shape":"MaxRetries"},
-        "AllocatedCapacity":{"shape":"IntegerValue"}
+        "AllocatedCapacity":{
+          "shape":"IntegerValue",
+          "deprecated":true,
+          "deprecatedMessage":"This property is deprecated, use MaxCapacity instead."
+        },
+        "Timeout":{"shape":"Timeout"},
+        "MaxCapacity":{"shape":"NullableDouble"},
+        "NotificationProperty":{"shape":"NotificationProperty"},
+        "WorkerType":{"shape":"WorkerType"},
+        "NumberOfWorkers":{"shape":"NullableInteger"},
+        "SecurityConfiguration":{"shape":"NameString"},
+        "Tags":{"shape":"TagsMap"}
       }
     },
     "CreateJobResponse":{
       "type":"structure",
       "members":{
         "Name":{"shape":"NameString"}
+      }
+    },
+    "CreateJsonClassifierRequest":{
+      "type":"structure",
+      "required":[
+        "Name",
+        "JsonPath"
+      ],
+      "members":{
+        "Name":{"shape":"NameString"},
+        "JsonPath":{"shape":"JsonPath"}
       }
     },
     "CreatePartitionRequest":{
@@ -1884,6 +2356,24 @@
         "ScalaCode":{"shape":"ScalaCode"}
       }
     },
+    "CreateSecurityConfigurationRequest":{
+      "type":"structure",
+      "required":[
+        "Name",
+        "EncryptionConfiguration"
+      ],
+      "members":{
+        "Name":{"shape":"NameString"},
+        "EncryptionConfiguration":{"shape":"EncryptionConfiguration"}
+      }
+    },
+    "CreateSecurityConfigurationResponse":{
+      "type":"structure",
+      "members":{
+        "Name":{"shape":"NameString"},
+        "CreatedTimestamp":{"shape":"TimestampValue"}
+      }
+    },
     "CreateTableRequest":{
       "type":"structure",
       "required":[
@@ -1914,7 +2404,9 @@
         "Schedule":{"shape":"GenericString"},
         "Predicate":{"shape":"Predicate"},
         "Actions":{"shape":"ActionList"},
-        "Description":{"shape":"DescriptionString"}
+        "Description":{"shape":"DescriptionString"},
+        "StartOnCreation":{"shape":"BooleanValue"},
+        "Tags":{"shape":"TagsMap"}
       }
     },
     "CreateTriggerResponse":{
@@ -1953,6 +2445,46 @@
       }
     },
     "CronExpression":{"type":"string"},
+    "CsvClassifier":{
+      "type":"structure",
+      "required":["Name"],
+      "members":{
+        "Name":{"shape":"NameString"},
+        "CreationTime":{"shape":"Timestamp"},
+        "LastUpdated":{"shape":"Timestamp"},
+        "Version":{"shape":"VersionId"},
+        "Delimiter":{"shape":"CsvColumnDelimiter"},
+        "QuoteSymbol":{"shape":"CsvQuoteSymbol"},
+        "ContainsHeader":{"shape":"CsvHeaderOption"},
+        "Header":{"shape":"CsvHeader"},
+        "DisableValueTrimming":{"shape":"NullableBoolean"},
+        "AllowSingleColumn":{"shape":"NullableBoolean"}
+      }
+    },
+    "CsvColumnDelimiter":{
+      "type":"string",
+      "max":1,
+      "min":1,
+      "pattern":"[^\\r\\n]"
+    },
+    "CsvHeader":{
+      "type":"list",
+      "member":{"shape":"NameString"}
+    },
+    "CsvHeaderOption":{
+      "type":"string",
+      "enum":[
+        "UNKNOWN",
+        "PRESENT",
+        "ABSENT"
+      ]
+    },
+    "CsvQuoteSymbol":{
+      "type":"string",
+      "max":1,
+      "min":1,
+      "pattern":"[^\\r\\n]"
+    },
     "CustomPatterns":{
       "type":"string",
       "max":16000,
@@ -1966,6 +2498,13 @@
     "DagNodes":{
       "type":"list",
       "member":{"shape":"CodeGenNode"}
+    },
+    "DataCatalogEncryptionSettings":{
+      "type":"structure",
+      "members":{
+        "EncryptionAtRest":{"shape":"EncryptionAtRest"},
+        "ConnectionPasswordEncryption":{"shape":"ConnectionPasswordEncryption"}
+      }
     },
     "Database":{
       "type":"structure",
@@ -2101,6 +2640,29 @@
       "members":{
       }
     },
+    "DeleteResourcePolicyRequest":{
+      "type":"structure",
+      "members":{
+        "PolicyHashCondition":{"shape":"HashString"}
+      }
+    },
+    "DeleteResourcePolicyResponse":{
+      "type":"structure",
+      "members":{
+      }
+    },
+    "DeleteSecurityConfigurationRequest":{
+      "type":"structure",
+      "required":["Name"],
+      "members":{
+        "Name":{"shape":"NameString"}
+      }
+    },
+    "DeleteSecurityConfigurationResponse":{
+      "type":"structure",
+      "members":{
+      }
+    },
     "DeleteTableRequest":{
       "type":"structure",
       "required":[
@@ -2187,6 +2749,7 @@
         "SecurityGroupIds":{"shape":"StringList"},
         "SubnetId":{"shape":"GenericString"},
         "YarnEndpointAddress":{"shape":"GenericString"},
+        "PrivateAddress":{"shape":"GenericString"},
         "ZeppelinRemoteSparkInterpreterPort":{"shape":"IntegerValue"},
         "PublicAddress":{"shape":"GenericString"},
         "Status":{"shape":"GenericString"},
@@ -2199,7 +2762,10 @@
         "LastUpdateStatus":{"shape":"GenericString"},
         "CreatedTimestamp":{"shape":"TimestampValue"},
         "LastModifiedTimestamp":{"shape":"TimestampValue"},
-        "PublicKey":{"shape":"GenericString"}
+        "PublicKey":{"shape":"GenericString"},
+        "PublicKeys":{"shape":"PublicKeysList"},
+        "SecurityConfiguration":{"shape":"NameString"},
+        "Arguments":{"shape":"MapValue"}
       }
     },
     "DevEndpointCustomLibraries":{
@@ -2212,6 +2778,42 @@
     "DevEndpointList":{
       "type":"list",
       "member":{"shape":"DevEndpoint"}
+    },
+    "DevEndpointNameList":{
+      "type":"list",
+      "member":{"shape":"NameString"}
+    },
+    "DevEndpointNames":{
+      "type":"list",
+      "member":{"shape":"GenericString"},
+      "max":25,
+      "min":1
+    },
+    "DynamoDBTarget":{
+      "type":"structure",
+      "members":{
+        "Path":{"shape":"Path"}
+      }
+    },
+    "DynamoDBTargetList":{
+      "type":"list",
+      "member":{"shape":"DynamoDBTarget"}
+    },
+    "EncryptionAtRest":{
+      "type":"structure",
+      "required":["CatalogEncryptionMode"],
+      "members":{
+        "CatalogEncryptionMode":{"shape":"CatalogEncryptionMode"},
+        "SseAwsKmsKeyId":{"shape":"NameString"}
+      }
+    },
+    "EncryptionConfiguration":{
+      "type":"structure",
+      "members":{
+        "S3Encryption":{"shape":"S3EncryptionList"},
+        "CloudWatchEncryption":{"shape":"CloudWatchEncryption"},
+        "JobBookmarksEncryption":{"shape":"JobBookmarksEncryption"}
+      }
     },
     "EntityNotFoundException":{
       "type":"structure",
@@ -2238,6 +2840,15 @@
       "members":{
         "MaxConcurrentRuns":{"shape":"MaxConcurrentRuns"}
       }
+    },
+    "ExecutionTime":{"type":"integer"},
+    "ExistCondition":{
+      "type":"string",
+      "enum":[
+        "MUST_EXIST",
+        "NOT_EXIST",
+        "NONE"
+      ]
     },
     "FieldType":{"type":"string"},
     "FilterString":{
@@ -2301,7 +2912,8 @@
       "required":["Name"],
       "members":{
         "CatalogId":{"shape":"CatalogIdString"},
-        "Name":{"shape":"NameString"}
+        "Name":{"shape":"NameString"},
+        "HidePassword":{"shape":"Boolean"}
       }
     },
     "GetConnectionResponse":{
@@ -2322,6 +2934,7 @@
       "members":{
         "CatalogId":{"shape":"CatalogIdString"},
         "Filter":{"shape":"GetConnectionsFilter"},
+        "HidePassword":{"shape":"Boolean"},
         "NextToken":{"shape":"Token"},
         "MaxResults":{"shape":"PageSize"}
       }
@@ -2373,6 +2986,18 @@
       "members":{
         "Crawlers":{"shape":"CrawlerList"},
         "NextToken":{"shape":"Token"}
+      }
+    },
+    "GetDataCatalogEncryptionSettingsRequest":{
+      "type":"structure",
+      "members":{
+        "CatalogId":{"shape":"CatalogIdString"}
+      }
+    },
+    "GetDataCatalogEncryptionSettingsResponse":{
+      "type":"structure",
+      "members":{
+        "DataCatalogEncryptionSettings":{"shape":"DataCatalogEncryptionSettings"}
       }
     },
     "GetDatabaseRequest":{
@@ -2586,6 +3211,47 @@
         "ScalaCode":{"shape":"ScalaCode"}
       }
     },
+    "GetResourcePolicyRequest":{
+      "type":"structure",
+      "members":{
+      }
+    },
+    "GetResourcePolicyResponse":{
+      "type":"structure",
+      "members":{
+        "PolicyInJson":{"shape":"PolicyJsonString"},
+        "PolicyHash":{"shape":"HashString"},
+        "CreateTime":{"shape":"Timestamp"},
+        "UpdateTime":{"shape":"Timestamp"}
+      }
+    },
+    "GetSecurityConfigurationRequest":{
+      "type":"structure",
+      "required":["Name"],
+      "members":{
+        "Name":{"shape":"NameString"}
+      }
+    },
+    "GetSecurityConfigurationResponse":{
+      "type":"structure",
+      "members":{
+        "SecurityConfiguration":{"shape":"SecurityConfiguration"}
+      }
+    },
+    "GetSecurityConfigurationsRequest":{
+      "type":"structure",
+      "members":{
+        "MaxResults":{"shape":"PageSize"},
+        "NextToken":{"shape":"GenericString"}
+      }
+    },
+    "GetSecurityConfigurationsResponse":{
+      "type":"structure",
+      "members":{
+        "SecurityConfigurations":{"shape":"SecurityConfigurationList"},
+        "NextToken":{"shape":"GenericString"}
+      }
+    },
     "GetTableRequest":{
       "type":"structure",
       "required":[
@@ -2666,6 +3332,19 @@
         "NextToken":{"shape":"Token"}
       }
     },
+    "GetTagsRequest":{
+      "type":"structure",
+      "required":["ResourceArn"],
+      "members":{
+        "ResourceArn":{"shape":"GlueResourceArn"}
+      }
+    },
+    "GetTagsResponse":{
+      "type":"structure",
+      "members":{
+        "Tags":{"shape":"TagsMap"}
+      }
+    },
     "GetTriggerRequest":{
       "type":"structure",
       "required":["Name"],
@@ -2733,6 +3412,19 @@
         "NextToken":{"shape":"Token"}
       }
     },
+    "GlueEncryptionException":{
+      "type":"structure",
+      "members":{
+        "Message":{"shape":"MessageString"}
+      },
+      "exception":true
+    },
+    "GlueResourceArn":{
+      "type":"string",
+      "max":10240,
+      "min":1,
+      "pattern":"arn:aws:glue:.*"
+    },
     "GrokClassifier":{
       "type":"structure",
       "required":[
@@ -2755,6 +3447,12 @@
       "max":2048,
       "min":1,
       "pattern":"[\\u0020-\\uD7FF\\uE000-\\uFFFD\\uD800\\uDC00-\\uDBFF\\uDFFF\\r\\t]*"
+    },
+    "HashString":{
+      "type":"string",
+      "max":255,
+      "min":1,
+      "pattern":"[\\u0020-\\uD7FF\\uE000-\\uFFFD\\uD800\\uDC00-\\uDBFF\\uDFFF\\t]*"
     },
     "IdString":{
       "type":"string",
@@ -2828,7 +3526,17 @@
         "DefaultArguments":{"shape":"GenericMap"},
         "Connections":{"shape":"ConnectionsList"},
         "MaxRetries":{"shape":"MaxRetries"},
-        "AllocatedCapacity":{"shape":"IntegerValue"}
+        "AllocatedCapacity":{
+          "shape":"IntegerValue",
+          "deprecated":true,
+          "deprecatedMessage":"This property is deprecated, use MaxCapacity instead."
+        },
+        "Timeout":{"shape":"Timeout"},
+        "MaxCapacity":{"shape":"NullableDouble"},
+        "WorkerType":{"shape":"WorkerType"},
+        "NumberOfWorkers":{"shape":"NullableInteger"},
+        "SecurityConfiguration":{"shape":"NameString"},
+        "NotificationProperty":{"shape":"NotificationProperty"}
       }
     },
     "JobBookmarkEntry":{
@@ -2840,6 +3548,20 @@
         "Attempt":{"shape":"IntegerValue"},
         "JobBookmark":{"shape":"JsonValue"}
       }
+    },
+    "JobBookmarksEncryption":{
+      "type":"structure",
+      "members":{
+        "JobBookmarksEncryptionMode":{"shape":"JobBookmarksEncryptionMode"},
+        "KmsKeyArn":{"shape":"KmsKeyArn"}
+      }
+    },
+    "JobBookmarksEncryptionMode":{
+      "type":"string",
+      "enum":[
+        "DISABLED",
+        "CSE-KMS"
+      ]
     },
     "JobCommand":{
       "type":"structure",
@@ -2853,6 +3575,10 @@
       "member":{"shape":"Job"}
     },
     "JobName":{"type":"string"},
+    "JobNameList":{
+      "type":"list",
+      "member":{"shape":"NameString"}
+    },
     "JobRun":{
       "type":"structure",
       "members":{
@@ -2868,7 +3594,19 @@
         "Arguments":{"shape":"GenericMap"},
         "ErrorMessage":{"shape":"ErrorString"},
         "PredecessorRuns":{"shape":"PredecessorList"},
-        "AllocatedCapacity":{"shape":"IntegerValue"}
+        "AllocatedCapacity":{
+          "shape":"IntegerValue",
+          "deprecated":true,
+          "deprecatedMessage":"This property is deprecated, use MaxCapacity instead."
+        },
+        "ExecutionTime":{"shape":"ExecutionTime"},
+        "Timeout":{"shape":"Timeout"},
+        "MaxCapacity":{"shape":"NullableDouble"},
+        "NotificationProperty":{"shape":"NotificationProperty"},
+        "WorkerType":{"shape":"WorkerType"},
+        "NumberOfWorkers":{"shape":"NullableInteger"},
+        "SecurityConfiguration":{"shape":"NameString"},
+        "LogGroupName":{"shape":"GenericString"}
       }
     },
     "JobRunList":{
@@ -2883,7 +3621,8 @@
         "STOPPING",
         "STOPPED",
         "SUCCEEDED",
-        "FAILED"
+        "FAILED",
+        "TIMEOUT"
       ]
     },
     "JobUpdate":{
@@ -2897,15 +3636,44 @@
         "DefaultArguments":{"shape":"GenericMap"},
         "Connections":{"shape":"ConnectionsList"},
         "MaxRetries":{"shape":"MaxRetries"},
-        "AllocatedCapacity":{"shape":"IntegerValue"}
+        "AllocatedCapacity":{
+          "shape":"IntegerValue",
+          "deprecated":true,
+          "deprecatedMessage":"This property is deprecated, use MaxCapacity instead."
+        },
+        "Timeout":{"shape":"Timeout"},
+        "MaxCapacity":{"shape":"NullableDouble"},
+        "WorkerType":{"shape":"WorkerType"},
+        "NumberOfWorkers":{"shape":"NullableInteger"},
+        "SecurityConfiguration":{"shape":"NameString"},
+        "NotificationProperty":{"shape":"NotificationProperty"}
       }
     },
+    "JsonClassifier":{
+      "type":"structure",
+      "required":[
+        "Name",
+        "JsonPath"
+      ],
+      "members":{
+        "Name":{"shape":"NameString"},
+        "CreationTime":{"shape":"Timestamp"},
+        "LastUpdated":{"shape":"Timestamp"},
+        "Version":{"shape":"VersionId"},
+        "JsonPath":{"shape":"JsonPath"}
+      }
+    },
+    "JsonPath":{"type":"string"},
     "JsonValue":{"type":"string"},
     "KeyString":{
       "type":"string",
       "max":255,
       "min":1,
       "pattern":"[\\u0020-\\uD7FF\\uE000-\\uFFFD\\uD800\\uDC00-\\uDBFF\\uDFFF\\t]*"
+    },
+    "KmsKeyArn":{
+      "type":"string",
+      "pattern":"arn:aws:kms:.*"
     },
     "Language":{
       "type":"string",
@@ -2933,11 +3701,73 @@
         "FAILED"
       ]
     },
+    "ListCrawlersRequest":{
+      "type":"structure",
+      "members":{
+        "MaxResults":{"shape":"PageSize"},
+        "NextToken":{"shape":"Token"},
+        "Tags":{"shape":"TagsMap"}
+      }
+    },
+    "ListCrawlersResponse":{
+      "type":"structure",
+      "members":{
+        "CrawlerNames":{"shape":"CrawlerNameList"},
+        "NextToken":{"shape":"Token"}
+      }
+    },
+    "ListDevEndpointsRequest":{
+      "type":"structure",
+      "members":{
+        "NextToken":{"shape":"GenericString"},
+        "MaxResults":{"shape":"PageSize"},
+        "Tags":{"shape":"TagsMap"}
+      }
+    },
+    "ListDevEndpointsResponse":{
+      "type":"structure",
+      "members":{
+        "DevEndpointNames":{"shape":"DevEndpointNameList"},
+        "NextToken":{"shape":"GenericString"}
+      }
+    },
+    "ListJobsRequest":{
+      "type":"structure",
+      "members":{
+        "NextToken":{"shape":"GenericString"},
+        "MaxResults":{"shape":"PageSize"},
+        "Tags":{"shape":"TagsMap"}
+      }
+    },
+    "ListJobsResponse":{
+      "type":"structure",
+      "members":{
+        "JobNames":{"shape":"JobNameList"},
+        "NextToken":{"shape":"GenericString"}
+      }
+    },
+    "ListTriggersRequest":{
+      "type":"structure",
+      "members":{
+        "NextToken":{"shape":"GenericString"},
+        "DependentJobName":{"shape":"NameString"},
+        "MaxResults":{"shape":"PageSize"},
+        "Tags":{"shape":"TagsMap"}
+      }
+    },
+    "ListTriggersResponse":{
+      "type":"structure",
+      "members":{
+        "TriggerNames":{"shape":"TriggerNameList"},
+        "NextToken":{"shape":"GenericString"}
+      }
+    },
     "Location":{
       "type":"structure",
       "members":{
         "Jdbc":{"shape":"CodeGenNodeArgs"},
-        "S3":{"shape":"CodeGenNodeArgs"}
+        "S3":{"shape":"CodeGenNodeArgs"},
+        "DynamoDB":{"shape":"CodeGenNodeArgs"}
       }
     },
     "LocationMap":{
@@ -2972,6 +3802,13 @@
     "LogicalOperator":{
       "type":"string",
       "enum":["EQUALS"]
+    },
+    "MapValue":{
+      "type":"map",
+      "key":{"shape":"GenericString"},
+      "value":{"shape":"GenericString"},
+      "max":100,
+      "min":0
     },
     "MappingEntry":{
       "type":"structure",
@@ -3028,6 +3865,29 @@
     "NonNegativeInteger":{
       "type":"integer",
       "min":0
+    },
+    "NotificationProperty":{
+      "type":"structure",
+      "members":{
+        "NotifyDelayAfter":{"shape":"NotifyDelayAfter"}
+      }
+    },
+    "NotifyDelayAfter":{
+      "type":"integer",
+      "box":true,
+      "min":1
+    },
+    "NullableBoolean":{
+      "type":"boolean",
+      "box":true
+    },
+    "NullableDouble":{
+      "type":"double",
+      "box":true
+    },
+    "NullableInteger":{
+      "type":"integer",
+      "box":true
     },
     "OperationTimeoutException":{
       "type":"structure",
@@ -3130,6 +3990,11 @@
         "AvailabilityZone":{"shape":"NameString"}
       }
     },
+    "PolicyJsonString":{
+      "type":"string",
+      "max":10240,
+      "min":2
+    },
     "Predecessor":{
       "type":"structure",
       "members":{
@@ -3161,6 +4026,39 @@
         "ROLE",
         "GROUP"
       ]
+    },
+    "PublicKeysList":{
+      "type":"list",
+      "member":{"shape":"GenericString"},
+      "max":5
+    },
+    "PutDataCatalogEncryptionSettingsRequest":{
+      "type":"structure",
+      "required":["DataCatalogEncryptionSettings"],
+      "members":{
+        "CatalogId":{"shape":"CatalogIdString"},
+        "DataCatalogEncryptionSettings":{"shape":"DataCatalogEncryptionSettings"}
+      }
+    },
+    "PutDataCatalogEncryptionSettingsResponse":{
+      "type":"structure",
+      "members":{
+      }
+    },
+    "PutResourcePolicyRequest":{
+      "type":"structure",
+      "required":["PolicyInJson"],
+      "members":{
+        "PolicyInJson":{"shape":"PolicyJsonString"},
+        "PolicyHashCondition":{"shape":"HashString"},
+        "PolicyExistsCondition":{"shape":"ExistCondition"}
+      }
+    },
+    "PutResourcePolicyResponse":{
+      "type":"structure",
+      "members":{
+        "PolicyHash":{"shape":"HashString"}
+      }
     },
     "PythonScript":{"type":"string"},
     "ResetJobBookmarkRequest":{
@@ -3211,6 +4109,25 @@
     },
     "RoleString":{"type":"string"},
     "RowTag":{"type":"string"},
+    "S3Encryption":{
+      "type":"structure",
+      "members":{
+        "S3EncryptionMode":{"shape":"S3EncryptionMode"},
+        "KmsKeyArn":{"shape":"KmsKeyArn"}
+      }
+    },
+    "S3EncryptionList":{
+      "type":"list",
+      "member":{"shape":"S3Encryption"}
+    },
+    "S3EncryptionMode":{
+      "type":"string",
+      "enum":[
+        "DISABLED",
+        "SSE-KMS",
+        "SSE-S3"
+      ]
+    },
     "S3Target":{
       "type":"structure",
       "members":{
@@ -3268,6 +4185,18 @@
     },
     "SchemaPathString":{"type":"string"},
     "ScriptLocationString":{"type":"string"},
+    "SecurityConfiguration":{
+      "type":"structure",
+      "members":{
+        "Name":{"shape":"NameString"},
+        "CreatedTimeStamp":{"shape":"TimestampValue"},
+        "EncryptionConfiguration":{"shape":"EncryptionConfiguration"}
+      }
+    },
+    "SecurityConfigurationList":{
+      "type":"list",
+      "member":{"shape":"SecurityConfiguration"}
+    },
     "SecurityGroupIdList":{
       "type":"list",
       "member":{"shape":"NameString"},
@@ -3332,7 +4261,17 @@
         "JobName":{"shape":"NameString"},
         "JobRunId":{"shape":"IdString"},
         "Arguments":{"shape":"GenericMap"},
-        "AllocatedCapacity":{"shape":"IntegerValue"}
+        "AllocatedCapacity":{
+          "shape":"IntegerValue",
+          "deprecated":true,
+          "deprecatedMessage":"This property is deprecated, use MaxCapacity instead."
+        },
+        "Timeout":{"shape":"Timeout"},
+        "MaxCapacity":{"shape":"NullableDouble"},
+        "WorkerType":{"shape":"WorkerType"},
+        "NumberOfWorkers":{"shape":"NullableInteger"},
+        "SecurityConfiguration":{"shape":"NameString"},
+        "NotificationProperty":{"shape":"NotificationProperty"}
       }
     },
     "StartJobRunResponse":{
@@ -3496,6 +4435,50 @@
       "type":"list",
       "member":{"shape":"TableVersionError"}
     },
+    "TagKey":{
+      "type":"string",
+      "max":128,
+      "min":1
+    },
+    "TagKeysList":{
+      "type":"list",
+      "member":{"shape":"TagKey"},
+      "max":50,
+      "min":0
+    },
+    "TagResourceRequest":{
+      "type":"structure",
+      "required":[
+        "ResourceArn",
+        "TagsToAdd"
+      ],
+      "members":{
+        "ResourceArn":{"shape":"GlueResourceArn"},
+        "TagsToAdd":{"shape":"TagsMap"}
+      }
+    },
+    "TagResourceResponse":{
+      "type":"structure",
+      "members":{
+      }
+    },
+    "TagValue":{
+      "type":"string",
+      "max":256,
+      "min":0
+    },
+    "TagsMap":{
+      "type":"map",
+      "key":{"shape":"TagKey"},
+      "value":{"shape":"TagValue"},
+      "max":50,
+      "min":0
+    },
+    "Timeout":{
+      "type":"integer",
+      "box":true,
+      "min":1
+    },
     "Timestamp":{"type":"timestamp"},
     "TimestampValue":{"type":"timestamp"},
     "Token":{"type":"string"},
@@ -3520,6 +4503,10 @@
     "TriggerList":{
       "type":"list",
       "member":{"shape":"Trigger"}
+    },
+    "TriggerNameList":{
+      "type":"list",
+      "member":{"shape":"NameString"}
     },
     "TriggerState":{
       "type":"string",
@@ -3558,6 +4545,22 @@
       "min":1,
       "pattern":"[\\u0020-\\uD7FF\\uE000-\\uFFFD\\uD800\\uDC00-\\uDBFF\\uDFFF\\r\\n\\t]*"
     },
+    "UntagResourceRequest":{
+      "type":"structure",
+      "required":[
+        "ResourceArn",
+        "TagsToRemove"
+      ],
+      "members":{
+        "ResourceArn":{"shape":"GlueResourceArn"},
+        "TagsToRemove":{"shape":"TagKeysList"}
+      }
+    },
+    "UntagResourceResponse":{
+      "type":"structure",
+      "members":{
+      }
+    },
     "UpdateBehavior":{
       "type":"string",
       "enum":[
@@ -3569,7 +4572,9 @@
       "type":"structure",
       "members":{
         "GrokClassifier":{"shape":"UpdateGrokClassifierRequest"},
-        "XMLClassifier":{"shape":"UpdateXMLClassifierRequest"}
+        "XMLClassifier":{"shape":"UpdateXMLClassifierRequest"},
+        "JsonClassifier":{"shape":"UpdateJsonClassifierRequest"},
+        "CsvClassifier":{"shape":"UpdateCsvClassifierRequest"}
       }
     },
     "UpdateClassifierResponse":{
@@ -3607,7 +4612,8 @@
         "Classifiers":{"shape":"ClassifierNameList"},
         "TablePrefix":{"shape":"TablePrefix"},
         "SchemaChangePolicy":{"shape":"SchemaChangePolicy"},
-        "Configuration":{"shape":"CrawlerConfiguration"}
+        "Configuration":{"shape":"CrawlerConfiguration"},
+        "CrawlerSecurityConfiguration":{"shape":"CrawlerSecurityConfiguration"}
       }
     },
     "UpdateCrawlerResponse":{
@@ -3626,6 +4632,19 @@
     "UpdateCrawlerScheduleResponse":{
       "type":"structure",
       "members":{
+      }
+    },
+    "UpdateCsvClassifierRequest":{
+      "type":"structure",
+      "required":["Name"],
+      "members":{
+        "Name":{"shape":"NameString"},
+        "Delimiter":{"shape":"CsvColumnDelimiter"},
+        "QuoteSymbol":{"shape":"CsvQuoteSymbol"},
+        "ContainsHeader":{"shape":"CsvHeaderOption"},
+        "Header":{"shape":"CsvHeader"},
+        "DisableValueTrimming":{"shape":"NullableBoolean"},
+        "AllowSingleColumn":{"shape":"NullableBoolean"}
       }
     },
     "UpdateDatabaseRequest":{
@@ -3651,8 +4670,12 @@
       "members":{
         "EndpointName":{"shape":"GenericString"},
         "PublicKey":{"shape":"GenericString"},
+        "AddPublicKeys":{"shape":"PublicKeysList"},
+        "DeletePublicKeys":{"shape":"PublicKeysList"},
         "CustomLibraries":{"shape":"DevEndpointCustomLibraries"},
-        "UpdateEtlLibraries":{"shape":"BooleanValue"}
+        "UpdateEtlLibraries":{"shape":"BooleanValue"},
+        "DeleteArguments":{"shape":"StringList"},
+        "AddArguments":{"shape":"MapValue"}
       }
     },
     "UpdateDevEndpointResponse":{
@@ -3685,6 +4708,14 @@
       "type":"structure",
       "members":{
         "JobName":{"shape":"NameString"}
+      }
+    },
+    "UpdateJsonClassifierRequest":{
+      "type":"structure",
+      "required":["Name"],
+      "members":{
+        "Name":{"shape":"NameString"},
+        "JsonPath":{"shape":"JsonPath"}
       }
     },
     "UpdatePartitionRequest":{
@@ -3829,6 +4860,14 @@
     "ViewTextString":{
       "type":"string",
       "max":409600
+    },
+    "WorkerType":{
+      "type":"string",
+      "enum":[
+        "Standard",
+        "G.1X",
+        "G.2X"
+      ]
     },
     "XMLClassifier":{
       "type":"structure",

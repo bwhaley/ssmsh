@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/abiosoft/ishell"
-	"github.com/kountable/ssmsh/parameterstore"
+	"github.com/bwhaley/ssmsh/parameterstore"
 )
 
 type fn func(*ishell.Context)
@@ -23,6 +23,7 @@ func Init(_shell *ishell.Shell, _ps *parameterstore.ParameterStore) {
 	registerCommand("history", "get parameter history", history, historyUsage)
 	registerCommand("ls", "list parameters", ls, lsUsage)
 	registerCommand("mv", "move parameters", mv, mvUsage)
+	registerCommand("policy", "create named parameter policy", policy, policyUsage)
 	registerCommand("put", "set parameter", put, putUsage)
 	registerCommand("region", "change region", region, regionUsage)
 	registerCommand("rm", "remove parameters", rm, rmUsage)
@@ -77,4 +78,11 @@ func groupByRegion(params []parameterstore.ParameterPath) map[string][]string {
 		paramsByRegion[p.Region] = append(paramsByRegion[p.Region], p.Name)
 	}
 	return paramsByRegion
+}
+
+func trim(with []string) (without []string) {
+	for i := range with {
+		without = append(without, strings.TrimSpace(with[i]))
+	}
+	return without
 }

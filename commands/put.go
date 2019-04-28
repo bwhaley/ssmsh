@@ -1,13 +1,17 @@
 package commands
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/abiosoft/ishell"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/kountable/ssmsh/parameterstore"
+	"github.com/bwhaley/ssmsh/parameterstore"
 )
 
 // TODO Inline syntax
@@ -25,7 +29,11 @@ Example of multiline put:
 ... key=arn:aws:kms:us-west-2:012345678901:key/321examp-ed00-427f-9729-748ba2254794
 ... overwrite=true
 ... pattern=[A-z]+
+... tier=advanced
+... policies=[policy1, policy2]
 ...
+/>
+Use the policy command to create named policy objects. Tier defaults to standard unless policies are defined.
 `
 
 var putParamInput ssm.PutParameterInput
@@ -71,8 +79,9 @@ func multiLinePut() bool {
 	shell.SetPrompt("... ")
 	defer setPrompt(ps.Cwd)
 	shell.Println("Input options. End with a blank line.")
-	shell.ReadMultiLinesFunc(putOptions)
-	if putParamInput == (ssm.PutParameterInput{}) {
+	str := shell.ReadMultiLinesFunc(putOptions)
+	if str == "" {
+		shell.Println("multiline input ended in empty string")
 		return false
 	}
 	return true
@@ -80,7 +89,7 @@ func multiLinePut() bool {
 
 func inlinePut(options []string) bool {
 	for _, p := range options {
-		if putOptions(p) == false {
+		if !putOptions(p) {
 			return false
 		}
 	}
@@ -89,24 +98,27 @@ func inlinePut(options []string) bool {
 
 func putOptions(s string) bool {
 	if s == "" {
+		shell.Println("no input")
 		return false
 	}
 	paramOption := strings.Split(s, "=")
 	if len(paramOption) < 2 {
-		shell.Println("Invalid input.")
+		shell.Println("invalid input")
 		shell.Println(putUsage)
 		return false
 	}
 	field := strings.ToLower(paramOption[0])
 	val := strings.Join(paramOption[1:], "=")
-	if validate(field, val) {
-		return true
+	err := validate(field, val)
+	if err != nil {
+		shell.Println(err)
+		return false
 	}
-	return false
+	return true
 }
 
-func validate(f, v string) bool {
-	m := map[string]func(string) bool{
+func validate(f, v string) (err error) {
+	m := map[string]func(string) error{
 		"type":        validateType,
 		"name":        validateName,
 		"value":       validateValue,
@@ -115,70 +127,115 @@ func validate(f, v string) bool {
 		"pattern":     validatePattern,
 		"overwrite":   validateOverwrite,
 		"region":      validateRegion,
+		"tier":        validateTier,
+		"policies":    validatePolicies,
 	}
 	if validator, ok := m[strings.ToLower(f)]; ok {
-		if validator(v) {
-			return true
+		err = validator(v)
+		if err != nil {
+			// A validator failed so we need to reset the parameter input to an empty state
+			putParamInput = ssm.PutParameterInput{}
+			shell.Println(putUsage)
+			return err
 		}
 	}
-	shell.Println("Input error.")
-	shell.Println(putUsage)
-	putParamInput = ssm.PutParameterInput{}
-	return false
+	return nil
 }
 
-func validateType(s string) bool {
+func validateType(s string) (err error) {
 	validTypes := []string{"String", "StringList", "SecureString"}
 	for i := 0; i < len(validTypes); i++ {
 		if strings.EqualFold(s, validTypes[i]) { // Case insensitive validation of type field
 			putParamInput.Type = aws.String(validTypes[i])
-			return true
+			return nil
 		}
 	}
-	shell.Println("Invalid type " + s)
-	return false
+	return fmt.Errorf("Invalid type %s", s)
 }
 
-func validateValue(s string) bool {
+func validateValue(s string) (err error) {
 	putParamInput.Value = aws.String(s)
-	return true
+	return nil
 }
 
-func validateName(s string) bool {
+func validateName(s string) (err error) {
 	if strings.HasPrefix(s, parameterstore.Delimiter) {
 		putParamInput.Name = aws.String(s)
 	} else {
 		putParamInput.Name = aws.String(ps.Cwd + parameterstore.Delimiter + s)
 	}
-	return true
+	return nil
 }
 
-func validateDescription(s string) bool {
+func validateDescription(s string) (err error) {
 	putParamInput.Description = aws.String(s)
-	return true
+	return nil
 }
 
-func validateKey(s string) bool {
+// TODO validate key
+func validateKey(s string) (err error) {
 	putParamInput.KeyId = aws.String(s)
-	return true
+	return nil
 }
 
-func validatePattern(s string) bool {
+// TODO validate pattern
+func validatePattern(s string) (err error) {
 	putParamInput.AllowedPattern = aws.String(s)
-	return true
+	return nil
 }
 
-func validateOverwrite(s string) bool {
+func validateOverwrite(s string) (err error) {
 	overwrite, err := strconv.ParseBool(s)
 	if err != nil {
 		shell.Println("overwrite must be true or false")
-		return false
+		return err
 	}
 	putParamInput.Overwrite = aws.Bool(overwrite)
-	return true
+	return nil
 }
 
-func validateRegion(s string) bool {
+func validateRegion(s string) (err error) {
 	putParamRegion = s
-	return true
+	return nil
+}
+
+const StandardTier = "Standard"
+const AdvancedTier = "Advanced"
+
+func validateTier(s string) (err error) {
+	if strings.ToLower(s) == StandardTier || strings.ToLower(s) == AdvancedTier {
+		putParamInput.Tier = aws.String(strings.Title(s))
+		return nil
+	}
+	return errors.New("tier must be standard or advanced")
+}
+
+func validatePolicies(s string) (err error) {
+	var policySet []Policies
+	re := regexp.MustCompile(`^\[([\w\s,]+)\]`)
+	p := re.FindStringSubmatch(s)
+	if len(p) != 2 {
+		return fmt.Errorf("unable to validate policies %s", s)
+	}
+	namedPolicies := trim(strings.Split(p[1], ","))
+	for _, p := range namedPolicies {
+		policy, present := policies[p]
+		if !present {
+			return fmt.Errorf("policy %q does not exist. add it with the policy command", p)
+		}
+		if policy.expiration != (Expiration{}) {
+			policySet = append(policySet, policy.expiration)
+		}
+		for i := range policy.expirationNotification {
+			policySet = append(policySet, policy.expirationNotification[i])
+		}
+		for i := range policy.noChangeNotification {
+			policySet = append(policySet, policy.noChangeNotification[i])
+		}
+	}
+	policyBytes, err := json.Marshal(policySet)
+	// shell.Printf("Policies: %v\n", string(policyBytes))
+	putParamInput.Policies = aws.String(string(policyBytes))
+	putParamInput.Tier = aws.String(AdvancedTier)
+	return nil
 }
