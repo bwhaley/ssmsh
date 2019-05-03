@@ -6,6 +6,7 @@ ssmsh is an interactive shell for the EC2 Parameter Store. Features:
 * Recursively list, copy, and remove parameters
 * Get parameter history
 * Create new parameters using put
+* Advanced parameters (with policies)
 * Supports emacs-style command shell navigation hotkeys
 * Submit batch commands with the `-file` flag
 * Inline commands
@@ -32,6 +33,7 @@ Commands:
   history      get parameter history
   ls           list parameters
   mv           move parameters
+  policy       create named parameter policy
   put          set parameter
   region       change region
   rm           remove parameters
