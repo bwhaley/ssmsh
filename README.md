@@ -216,6 +216,7 @@ export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
 ## Related tools
 [Chamber](https://github.com/segmentio/chamber) | A tool for managing secrets
+[Parameter Store Manager](https://github.com/smblee/parameter-store-manager) | A GUI for working with the Parameter Store
 
 ## Credits
 Library | Use
