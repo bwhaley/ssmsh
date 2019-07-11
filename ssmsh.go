@@ -13,7 +13,7 @@ import (
 	"github.com/mattn/go-shellwords"
 )
 
-const version = "1.3"
+const version = "1.3.1"
 
 func main() {
 	var _version bool
