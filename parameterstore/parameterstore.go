@@ -319,10 +319,13 @@ func (ps *ParameterStore) Copy(src, dst ParameterPath, recurse bool) error {
 	} else if srcIsPath && dstIsParameter {
 		return fmt.Errorf("Cannot copy path (%s) to parameter (%s)", src, dst)
 	} else if srcIsPath {
-		if recurse {
-			return ps.copyPathToPath(src, dst)
+		if !recurse {
+			return fmt.Errorf("%s and %s are both paths but recursion not requested. Use -R", src, dst)
 		}
-		return fmt.Errorf("%s and %s are both paths but recursion not requested. Use -R", src, dst)
+		if dstIsPath {
+			return ps.copyPathToPath(false, src, dst)
+		}
+		return ps.copyPathToPath(true, src, dst)
 	}
 	return fmt.Errorf("%s is not a path or parameter", src)
 }
@@ -361,7 +364,7 @@ func (ps *ParameterStore) copyParameterToPath(srcParam, dstPath ParameterPath) e
 	return ps.copyParameter(srcParam, dstPath)
 }
 
-func (ps *ParameterStore) copyPathToPath(srcPath, dstPath ParameterPath) error {
+func (ps *ParameterStore) copyPathToPath(newPath bool, srcPath, dstPath ParameterPath) error {
 	/*
 		1) Get all source parameters
 		2) Map sources to destinations
@@ -376,7 +379,7 @@ func (ps *ParameterStore) copyPathToPath(srcPath, dstPath ParameterPath) error {
 		if err != nil {
 			return err
 		}
-		paramMap := makeParameterMap(resp.Parameters, srcPath, dstPath)
+		paramMap := makeParameterMap(resp.Parameters, newPath, srcPath, dstPath)
 		for src, dst := range paramMap {
 			err = ps.copyParameter(src, dst)
 			if err != nil {
@@ -392,7 +395,7 @@ func (ps *ParameterStore) copyPathToPath(srcPath, dstPath ParameterPath) error {
 }
 
 // makeParameterMap returns a map of source param name to dest param name
-func makeParameterMap(params []*ssm.Parameter, srcPath, dstPath ParameterPath) (sourceToDst map[ParameterPath]ParameterPath) {
+func makeParameterMap(params []*ssm.Parameter, newPath bool, srcPath, dstPath ParameterPath) (sourceToDst map[ParameterPath]ParameterPath) {
 	/*
 		sample input:
 			params: [/House/Stark/JonSnow /House/Stark/Special/Bran]
@@ -413,12 +416,19 @@ func makeParameterMap(params []*ssm.Parameter, srcPath, dstPath ParameterPath) (
 			dstPath.Name = ""
 		}
 
+		var name string
+		if newPath {
+			name = strings.Join(
+				[]string{dstPath.Name, dstParamName},
+				Delimiter)
+		} else {
+			name = strings.Join(
+				[]string{dstPath.Name, srcBasePath, dstParamName},
+				Delimiter)
+		}
+
 		dstParam := ParameterPath{
-			Name: strings.Join([]string{
-				dstPath.Name,
-				srcBasePath,
-				dstParamName,
-			}, Delimiter),
+			Name:   name,
 			Region: dstPath.Region,
 		}
 		sourceToDst[srcParam] = dstParam
