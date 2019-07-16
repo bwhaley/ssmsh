@@ -7,6 +7,12 @@ GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null)
 
 .PHONY: build test golint docs $(PROJECT) $(PKGS) vendor
 
+VERSION := $(shell echo ${SSMSH_VERSION})
+ifeq "$(VERSION)" ""
+    $(error must define SSMSH_VERSION env var)
+endif
+
+
 GOVERSION := $(shell go version | grep 1.12)
 ifeq "$(GOVERSION)" ""
     $(error must be running Go version 1.12.x)
@@ -26,7 +32,7 @@ DEP := $(GOPATH)/bin/dep
 $(DEP):
 	go get -u github.com/golang/dep
 
-GO_LDFLAGS := -X $(shell go list ./$(PACKAGE)).GitCommit=$(GIT_COMMIT)
+GO_LDFLAGS := -X $(shell go list ./$(PACKAGE)).GitCommit=$(GIT_COMMIT) -X main.Version=${VERSION}
 
 test: $(PKGS)
 
@@ -46,9 +52,9 @@ vendor: $(DEP)
 build:
 	go build -i -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE) $(PROJECT)
 build-linux:
-	GOOS=linux GOARCH=amd64 go build -o $(GOPATH)/bin/$(EXECUTABLE)-linux-amd64
+	GOOS=linux GOARCH=amd64 go build -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE)-linux-amd64
 build-darwin:
-	GOOS=darwin GOARCH=amd64 go build -o $(GOPATH)/bin/$(EXECUTABLE)-darwin-amd64
+	GOOS=darwin GOARCH=amd64 go build -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE)-darwin-amd64
 
 clean:
 	rm -f $(GOPATH)/bin/$(EXECUTABLE) $(GOPATH)/bin/$(EXECUTABLE)-*

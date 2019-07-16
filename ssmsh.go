@@ -13,16 +13,16 @@ import (
 	"github.com/mattn/go-shellwords"
 )
 
-const version = "1.3.1"
+var Version string
 
 func main() {
-	var _version bool
+	var version bool
 	_fn := flag.String("file", "", "Read commands from file (use - for stdin)")
-	flag.BoolVar(&_version, "version", false, "Display the current version")
+	flag.BoolVar(&version, "version", false, "Display the current version")
 	flag.Parse()
 
-	if _version {
-		fmt.Println("Version", version)
+	if version {
+		fmt.Println("Version", Version)
 		os.Exit(0)
 	}
 
