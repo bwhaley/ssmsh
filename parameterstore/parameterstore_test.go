@@ -211,13 +211,13 @@ func TestMoveParameter(t *testing.T) {
 	}
 	if len(resp) > 0 {
 		if err != nil {
-			msg := fmt.Errorf("expected parameter %s to be removed but found %v", srcParam.Name, resp)
+			msg := fmt.Errorf("Expected parameter %s to be removed but found %v", srcParam.Name, resp)
 			t.Fatal(msg)
 		}
 	}
 	_, err = p.Get([]string{dstParam.Name}, p.Region)
 	if err != nil {
-		msg := fmt.Errorf("expected to find %s but didn't", dstParam.Name)
+		msg := fmt.Errorf("Expected to find %s but didn't!", dstParam.Name)
 		t.Fatal(msg)
 	}
 }
@@ -267,60 +267,18 @@ func TestCopyPath(t *testing.T) {
 	if err != nil {
 		t.Fatal("Error copying parameter path: ", err)
 	}
-	expectedName := []string{"/House/Targaryen/Stark/EddardStark"}
-	resp, err := p.Get(expectedName, "region")
+	expectedName := parameterstore.ParameterPath{
+		Name:   "/House/Targaryen/Stark/EddardStark",
+		Region: "region",
+	}
+	resp, err := p.GetHistory(expectedName)
 	if err != nil {
-		t.Fatal("Error getting param: ", err)
+		t.Fatal("Error getting history: ", err)
 	}
 	if len(resp) != 1 {
-		msg := fmt.Errorf("expected %s, got %s", expectedName, resp)
+		msg := fmt.Errorf("Expected history of length 1, got %s", resp)
 		t.Fatal(msg)
 	}
-
-	// p.Clients[p.Region] = mockedSSM{
-	// 	GetParameterResp: []ssm.GetParameterOutput{
-	// 		{Parameter: EddardStark},
-	// 		{Parameter: CatelynStark},
-	// 		{Parameter: RobStark},
-	// 		{Parameter: JonSnow},
-	// 		{Parameter: DaenerysTargaryen},
-	// 	},
-	// 	GetParametersByPathResp: ssm.GetParametersByPathOutput{
-	// 		Parameters: HouseTargaryen,
-	// 		NextToken:  aws.String(NextToken),
-	// 	},
-	// 	GetParametersByPathNext: ssm.GetParametersByPathOutput{
-	// 		Parameters: []*ssm.Parameter{JonSnow},
-	// 		NextToken:  aws.String(""),
-	// 	},
-	// 	GetParameterHistoryResp: ssm.GetParameterHistoryOutput{
-	// 		Parameters: []*ssm.ParameterHistory{
-	// 			{
-	// 				Name:    aws.String("/House/Stark/EddardStark"),
-	// 				Version: aws.Int64(2),
-	// 			},
-	// 		},
-	// 		NextToken: aws.String(""),
-	// 	},
-	// }
-	// err = p.Copy(srcPath, dstPath, true)
-	// if err != nil {
-	// 	t.Fatal("Error copying parameter path: ", err)
-	// }
-	// expectedName = parameterstore.ParameterPath{
-	// 	Name:   "/House/Targaryen/Nothing/EddardStark",
-	// 	Region: "region",
-	// }
-	// resp, err = p.GetHistory(expectedName)
-	// if err != nil {
-	// 	t.Fatal("Error getting history: ", err)
-	// }
-	// // if len(resp) != 1 {
-	// // 	msg := fmt.Errorf("Expected history of length 1, got %s", resp)
-	// // 	t.Fatal(msg)
-	// // }
-	// msg := fmt.Errorf("Expected history of length 1, got %s", resp)
-	// t.Fatal(msg)
 }
 
 func TestCopyParameter(t *testing.T) {
