@@ -34,6 +34,7 @@ Commands:
   ls           list parameters
   mv           move parameters
   policy       create named parameter policy
+  profile      switch the active AWS credentials profile
   put          set parameter
   region       change region
   rm           remove parameters
@@ -151,6 +152,15 @@ Alternatively:
 /> put name=/House/Stark/Robb value="King in the North" type=String policies=[RobbStarkExpiration,ReminderPolicy]
 ```
 
+### Switch profile
+```bash
+/> profile
+default
+/> profile project1
+/> profile
+project1
+```
+
 ### Change active region
 ```bash
 /> region eu-central-1
@@ -183,7 +193,7 @@ $ cat commands.txt | ssmsh -file -  # Read commands from STDIN
 $ ssmsh put name=/House/Lannister/CerseiLannister value="Noble" description="Daughter of Tywin" type=string
 ```
 
-## todo
+## todo (maybe)
 * [ ] Flexible and improved output formats
 * [ ] Release via homebrew
 * [ ] Copy between accounts using profiles
@@ -203,7 +213,7 @@ MIT
 1. Ensure you have at least go v1.10
 ```
 $ go version
-go version go1.10 linux/amd64
+go version go1.12 linux/amd64
 ```
 2. Ensure your `$GOPATH` exists and is in your `$PATH`
 ```
@@ -215,6 +225,8 @@ export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
 
 ## Related tools
+Tool | Description
+---- | -----------
 [Chamber](https://github.com/segmentio/chamber) | A tool for managing secrets
 [Parameter Store Manager](https://github.com/smblee/parameter-store-manager) | A GUI for working with the Parameter Store
 

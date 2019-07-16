@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -17,21 +18,23 @@ const Delimiter = "/"
 
 // ParameterStore represents the current state and preferences of the shell
 type ParameterStore struct {
-	Confirm bool   // TODO Prompt for confirmation to delete or overwrite
-	Cwd     string // The current working directory in the hierarchy
-	Decrypt bool   // Decrypt values retrieved from Get
-	Key     string // The KMS key to use for SecureString parameters
-	Region  string
-	Clients map[string]ssmiface.SSMAPI
+	Confirm bool                       // TODO Prompt for confirmation to delete or overwrite
+	Cwd     string                     // The current working directory in the hierarchy
+	Decrypt bool                       // Decrypt values retrieved from Get
+	Key     string                     // The KMS key to use for SecureString parameters
+	Region  string                     // AWS region on which to operate
+	Profile string                     // Profile to use from .aws/[config|credentials]
+	Clients map[string]ssmiface.SSMAPI // per-region SSM clients
 }
 
-func newSession(region string) *session.Session {
+func newSession(region, profile string) *session.Session {
 	return session.Must(
 		session.NewSessionWithOptions(
 			session.Options{
 				SharedConfigState: session.SharedConfigEnable,
 				Config: aws.Config{
-					Region: aws.String(region),
+					Region:      aws.String(region),
+					Credentials: credentials.NewSharedCredentials("", profile),
 				},
 			},
 		),
@@ -44,7 +47,10 @@ func (ps *ParameterStore) NewParameterStore() error {
 	ps.Cwd = Delimiter
 	ps.Decrypt = false
 	ps.Clients = make(map[string]ssmiface.SSMAPI)
-	ps.Clients[ps.Region] = ssm.New(newSession(ps.Region))
+	if ps.Profile == "" {
+		ps.Profile = "default"
+	}
+	ps.Clients[ps.Region] = ssm.New(newSession(ps.Region, ps.Profile))
 
 	// Check for a non-existent parameter to validate credentials & permissions
 	_, err := ps.Get([]string{Delimiter}, ps.Region)
@@ -57,7 +63,7 @@ func (ps *ParameterStore) NewParameterStore() error {
 // InitClient initializes an SSM client in a given region
 func (ps *ParameterStore) InitClient(region string) {
 	if _, ok := ps.Clients[region]; !ok {
-		ps.Clients[region] = ssm.New(newSession(region))
+		ps.Clients[region] = ssm.New(newSession(region, ps.Profile))
 	}
 }
 
