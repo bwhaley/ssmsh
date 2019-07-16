@@ -210,7 +210,7 @@ $ ssmsh put name=/House/Lannister/CerseiLannister value="Noble" description="Dau
 MIT
 
 ## Contributing/compiling
-1. Ensure you have at least go v1.10
+1. Ensure you have at least go v1.12
 ```
 $ go version
 go version go1.12 linux/amd64
