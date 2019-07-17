@@ -14,6 +14,6 @@ func profile(c *ishell.Context) {
 		}
 	} else if len(c.Args) == 1 {
 		ps.Profile = c.Args[0]
-		ps.NewParameterStore()
+		ps.InitClient(ps.Region)
 	}
 }

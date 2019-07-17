@@ -63,9 +63,7 @@ func (ps *ParameterStore) NewParameterStore() error {
 
 // InitClient initializes an SSM client in a given region
 func (ps *ParameterStore) InitClient(region string) {
-	if _, ok := ps.Clients[region]; !ok {
-		ps.Clients[region] = ssm.New(newSession(region, ps.Profile))
-	}
+	ps.Clients[region] = ssm.New(newSession(region, ps.Profile))
 }
 
 // ParameterPath abstracts a parameter to include some metadata
