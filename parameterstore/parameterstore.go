@@ -3,11 +3,11 @@ package parameterstore
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -33,9 +33,9 @@ func newSession(region, profile string) *session.Session {
 			session.Options{
 				SharedConfigState: session.SharedConfigEnable,
 				Config: aws.Config{
-					Region:      aws.String(region),
-					Credentials: credentials.NewSharedCredentials("", profile),
+					Region: aws.String(region),
 				},
+				Profile: profile,
 			},
 		),
 	)
@@ -47,6 +47,7 @@ func (ps *ParameterStore) NewParameterStore() error {
 	ps.Cwd = Delimiter
 	ps.Decrypt = false
 	ps.Clients = make(map[string]ssmiface.SSMAPI)
+	ps.Profile = os.Getenv("AWS_PROFILE")
 	if ps.Profile == "" {
 		ps.Profile = "default"
 	}
