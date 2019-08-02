@@ -83,17 +83,6 @@
   revision = "c2b33e84"
 
 [[projects]]
-  digest = "1:9c10a5ae091b43ff7587e7ea447cfc66443767e2effd0bbaeac01a0d5efa49b1"
-  name = "github.com/bwhaley/ssmsh"
-  packages = [
-    "commands",
-    "parameterstore",
-  ]
-  pruneopts = ""
-  revision = "1de25cb3cd9d69ba871d5168025c4cca15145b37"
-  version = "1.2.1"
-
-[[projects]]
   digest = "1:9ea83adf8e96d6304f394d40436f2eb44c1dc3250d223b74088cc253a6cd0a1c"
   name = "github.com/mattn/go-colorable"
   packages = ["."]
@@ -134,8 +123,6 @@
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/ssm",
     "github.com/aws/aws-sdk-go/service/ssm/ssmiface",
-    "github.com/bwhaley/ssmsh/commands",
-    "github.com/bwhaley/ssmsh/parameterstore",
     "github.com/mattn/go-shellwords",
   ]
   solver-name = "gps-cdcl"
