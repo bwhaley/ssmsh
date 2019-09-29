@@ -8,9 +8,10 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	saws "github.com/bwhaley/ssmsh/aws"
+	"github.com/bwhaley/ssmsh/config"
 )
 
 // Delimiter is the parameter path separator character
@@ -18,40 +19,56 @@ const Delimiter = "/"
 
 // ParameterStore represents the current state and preferences of the shell
 type ParameterStore struct {
-	Confirm bool                       // TODO Prompt for confirmation to delete or overwrite
-	Cwd     string                     // The current working directory in the hierarchy
-	Decrypt bool                       // Decrypt values retrieved from Get
-	Key     string                     // The KMS key to use for SecureString parameters
-	Region  string                     // AWS region on which to operate
-	Profile string                     // Profile to use from .aws/[config|credentials]
-	Clients map[string]ssmiface.SSMAPI // per-region SSM clients
+	Cwd       string                     // The current working directory in the hierarchy
+	Decrypt   bool                       // Decrypt values retrieved from Get
+	Type      string                     // Default parameter type (String, SecureString, StringList)
+	Key       string                     // The KMS key to use for SecureString parameters
+	Region    string                     // AWS region on which to operate
+	Overwrite bool                       // Whether or not to overwrite parameters
+	Profile   string                     // Profile to use from .aws/[config|credentials]
+	Clients   map[string]ssmiface.SSMAPI // per-region SSM clients
 }
 
-func newSession(region, profile string) *session.Session {
-	return session.Must(
-		session.NewSessionWithOptions(
-			session.Options{
-				SharedConfigState: session.SharedConfigEnable,
-				Config: aws.Config{
-					Region: aws.String(region),
-				},
-				Profile: profile,
-			},
-		),
-	)
+// SetConfig sets the shels configuration state
+func (ps *ParameterStore) SetDefaults(cfg config.Config) {
+	ps.Decrypt = cfg.Default.Decrypt
+	ps.Overwrite = cfg.Default.Overwrite
+
+	// The value in the $AWS_PROFILE env var is most preferred
+	ps.Profile = os.Getenv("AWS_PROFILE")
+
+	// Profile setting via ssmsh config file is second
+	if ps.Profile == "" {
+		ps.Profile = cfg.Default.Profile
+	}
+
+	// Fall back to the default profile
+	if ps.Profile == "" {
+		ps.Profile = "default"
+	}
+
+	if cfg.Default.Key != "" {
+		ps.Key = cfg.Default.Key
+	}
+
+	if cfg.Default.Type != "" {
+		ps.Type = cfg.Default.Type
+	}
+
+	// The value in the $AWS_REGION env var is most preferred
+	ps.Region = os.Getenv("AWS_REGION")
+
+	if ps.Region == "" {
+		ps.Region = cfg.Default.Region
+	}
 }
 
 // NewParameterStore initializes a ParameterStore with default values
 func (ps *ParameterStore) NewParameterStore() error {
-	ps.Confirm = false
 	ps.Cwd = Delimiter
-	ps.Decrypt = false
+
 	ps.Clients = make(map[string]ssmiface.SSMAPI)
-	ps.Profile = os.Getenv("AWS_PROFILE")
-	if ps.Profile == "" {
-		ps.Profile = "default"
-	}
-	ps.Clients[ps.Region] = ssm.New(newSession(ps.Region, ps.Profile))
+	ps.Clients[ps.Region] = ssm.New(saws.NewSession(ps.Region, ps.Profile))
 
 	// Check for a non-existent parameter to validate credentials & permissions
 	_, err := ps.Get([]string{Delimiter}, ps.Region)
@@ -63,7 +80,7 @@ func (ps *ParameterStore) NewParameterStore() error {
 
 // InitClient initializes an SSM client in a given region
 func (ps *ParameterStore) InitClient(region string) {
-	ps.Clients[region] = ssm.New(newSession(region, ps.Profile))
+	ps.Clients[region] = ssm.New(saws.NewSession(region, ps.Profile))
 }
 
 // ParameterPath abstracts a parameter to include some metadata
@@ -96,17 +113,24 @@ type ListResult struct {
 // List displays the parameters in a given path
 // Behavior is vaguely similar to UNIX ls
 func (ps *ParameterStore) List(ppath ParameterPath, recurse bool, lr chan ListResult, quit chan bool) {
+	results := []string{}
+
 	path := ppath.Name
 	region := ppath.Region
 	// Check for parameters under this path
 	path = fqp(path, ps.Cwd)
-	results := []string{}
+
+	// To find all the paths, the call to GetParametersByPath is always recursive
+	// The results are culled later to present just the top-level results
 	params := &ssm.GetParametersByPathInput{
 		Path:           aws.String(path),
 		Recursive:      aws.Bool(true),
 		WithDecryption: aws.Bool(ps.Decrypt),
 	}
 	for {
+		// Interrupt this loop with SIGQUIT
+		// GetParametersByPath returns max 10 results at a time. For paths with many
+		// parameters this can take a long time.
 		select {
 		case <-quit:
 			return
@@ -165,6 +189,7 @@ func (ps *ParameterStore) Remove(params []ParameterPath, recurse bool) (err erro
 	return ps.deleteByRegion(parametersToDelete)
 }
 
+// recursiveDelete deletes all the parameters under a given path
 func (ps *ParameterStore) recursiveDelete(path ParameterPath) (err error) {
 	var parametersToDelete []ParameterPath
 	additionalParams := &ssm.GetParametersByPathInput{
@@ -299,9 +324,8 @@ func (ps *ParameterStore) Move(src, dst ParameterPath) error {
 
 // Copy duplicates a parameter from src to dst
 func (ps *ParameterStore) Copy(src, dst ParameterPath, recurse bool) error {
-	src.Name = fqp(src.Name, ps.Cwd)
-	dst.Name = fqp(dst.Name, ps.Cwd)
 	var srcIsParameter, dstIsParameter, srcIsPath, dstIsPath bool
+
 	if !ps.Decrypt {
 		// Decryption required for copy
 		ps.Decrypt = true
@@ -309,14 +333,20 @@ func (ps *ParameterStore) Copy(src, dst ParameterPath, recurse bool) error {
 			ps.Decrypt = false
 		}()
 	}
+
+	src.Name = fqp(src.Name, ps.Cwd)
+	dst.Name = fqp(dst.Name, ps.Cwd)
+
 	srcIsParameter = ps.isParameter(src)
 	if !srcIsParameter {
 		srcIsPath = ps.isPath(src)
 	}
+
 	dstIsParameter = ps.isParameter(dst)
 	if !dstIsParameter {
 		dstIsPath = ps.isPath(dst)
 	}
+
 	if srcIsParameter && !dstIsPath {
 		return ps.copyParameter(src, dst)
 	} else if srcIsParameter && dstIsPath {
@@ -332,9 +362,10 @@ func (ps *ParameterStore) Copy(src, dst ParameterPath, recurse bool) error {
 		}
 		return ps.copyPathToPath(true, src, dst)
 	}
-	return fmt.Errorf("%s is not a path or parameter", src)
+	return fmt.Errorf("%s is not a path or parameter", src.Name)
 }
 
+// copyParameter copies one parameter to a new name
 func (ps *ParameterStore) copyParameter(src, dst ParameterPath) error {
 	if !ps.isParameter(src) {
 		return errors.New("source must be a parameter: " + src.Name)
@@ -354,7 +385,7 @@ func (ps *ParameterStore) copyParameter(src, dst ParameterPath) error {
 		KeyId:          pLatest.KeyId,
 		Description:    pLatest.Description,
 		AllowedPattern: pLatest.AllowedPattern,
-		Overwrite:      aws.Bool(true), // TODO Prompt for overwrite
+		Overwrite:      aws.Bool(ps.Overwrite),
 	}
 	_, err = ps.Put(putParamInput, dst.Region)
 	if err != nil {
@@ -363,12 +394,14 @@ func (ps *ParameterStore) copyParameter(src, dst ParameterPath) error {
 	return nil
 }
 
+// copyParameterToPath copies a parameter to a given path (preserving the parameter name)
 func (ps *ParameterStore) copyParameterToPath(srcParam, dstPath ParameterPath) error {
 	srcParamElements := strings.Split(srcParam.Name, Delimiter)
 	dstPath.Name = dstPath.Name + Delimiter + srcParamElements[len(srcParamElements)-1]
 	return ps.copyParameter(srcParam, dstPath)
 }
 
+// copyPathToPath copies the parameters at a source path to a new destination path
 func (ps *ParameterStore) copyPathToPath(newPath bool, srcPath, dstPath ParameterPath) error {
 	/*
 		1) Get all source parameters
@@ -452,7 +485,7 @@ func (ps *ParameterStore) inputPaths(paths []string) []*string {
 	return _paths
 }
 
-// fqp cleans a provided path
+// fqp (fully qualified path) cleans a provided path
 // relative paths are prefixed with cwd
 // TODO Support regex or globbing
 func fqp(path string, cwd string) string {

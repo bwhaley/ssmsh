@@ -9,6 +9,7 @@ import (
 
 	"github.com/abiosoft/ishell"
 	"github.com/bwhaley/ssmsh/commands"
+	"github.com/bwhaley/ssmsh/config"
 	"github.com/bwhaley/ssmsh/parameterstore"
 	"github.com/mattn/go-shellwords"
 )
@@ -16,30 +17,36 @@ import (
 var Version string
 
 func main() {
-	var version bool
-	_fn := flag.String("file", "", "Read commands from file (use - for stdin)")
-	flag.BoolVar(&version, "version", false, "Display the current version")
+	cfgFile := flag.String("config", "", "Load configuration from the specified file")
+	file := flag.String("file", "", "Read commands from file (use - for stdin)")
+	version := flag.Bool("version", false, "Display the current version")
 	flag.Parse()
 
-	if version {
+	if *version {
 		fmt.Println("Version", Version)
 		os.Exit(0)
 	}
 
+	cfg, err := config.ReadConfig(*cfgFile)
+	if err != nil {
+		fmt.Printf("Error reading configuration file %s: %s\n", *cfgFile, err)
+		os.Exit(1)
+	}
+
 	shell := ishell.New()
 	var ps parameterstore.ParameterStore
-	err := ps.NewParameterStore()
+	ps.SetDefaults(cfg)
+	err = ps.NewParameterStore()
 	if err != nil {
 		shell.Println("Error initializing session. Is your authentication correct?", err)
 		os.Exit(1)
 	}
 	commands.Init(shell, &ps)
 
-	fn := *_fn
-	if fn == "-" {
-		processStdin(shell, fn)
-	} else if fn != "" {
-		processFile(shell, fn)
+	if *file == "-" {
+		processStdin(shell, *file)
+	} else if *file != "" {
+		processFile(shell, *file)
 	} else if len(flag.Args()) > 1 {
 		shell.Process(flag.Args()...)
 	} else {

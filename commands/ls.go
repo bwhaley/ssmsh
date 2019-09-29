@@ -24,10 +24,6 @@ func ls(c *ishell.Context) {
 	if len(paths) == 0 {
 		paths = append(paths, ps.Cwd)
 	}
-	if ps.Cwd == parameterstore.Delimiter {
-		shell.Println("Warning: Listing a large number of parameters may take a long time.")
-		shell.Println("Press ^C to interrupt.")
-	}
 	for _, p := range paths {
 		pathList, err = list(p, recurse)
 		if err != nil {

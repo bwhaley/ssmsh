@@ -21,6 +21,7 @@ func Init(_shell *ishell.Shell, _ps *parameterstore.ParameterStore) {
 	registerCommand("decrypt", "toggle parameter decryption", decrypt, decryptUsage)
 	registerCommand("get", "get parameters", get, getUsage)
 	registerCommand("history", "get parameter history", history, historyUsage)
+	registerCommand("key", "set the KMS key", key, keyUsage)
 	registerCommand("ls", "list parameters", ls, lsUsage)
 	registerCommand("mv", "move parameters", mv, mvUsage)
 	registerCommand("policy", "create named parameter policy", policy, policyUsage)

@@ -28,3 +28,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/aws/aws-sdk-go"
+
+[[constraint]]
+  version = "v1.2.3"
+  name = "gopkg.in/gcfg.v1"

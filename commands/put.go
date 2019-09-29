@@ -43,7 +43,15 @@ var putParamRegion string
 func put(c *ishell.Context) {
 	var err error
 	var resp *ssm.PutParameterOutput
+
 	putParamInput = ssm.PutParameterInput{}
+	err = setDefaults(&putParamInput)
+	if err != nil {
+		shell.Println(err)
+		return
+	}
+
+	// Read args for values
 	var r bool
 	if len(c.Args) == 0 {
 		r = multiLinePut()
@@ -53,15 +61,14 @@ func put(c *ishell.Context) {
 	if !r {
 		return
 	}
+
 	if putParamInput.Name == nil ||
 		putParamInput.Value == nil ||
 		putParamInput.Type == nil {
 		shell.Println("Error: name, type and value are required.")
 		return
 	}
-	if putParamRegion == "" {
-		putParamRegion = ps.Region
-	}
+
 	resp, err = ps.Put(&putParamInput, putParamRegion)
 	if err != nil {
 		shell.Println("Error: ", err)
@@ -73,11 +80,27 @@ func put(c *ishell.Context) {
 	}
 }
 
+// setDefaults sets parameter settings according to the defaults
+func setDefaults(param *ssm.PutParameterInput) (err error) {
+	param.SetOverwrite(ps.Overwrite)
+	if ps.Key != "" {
+		param.SetKeyId(ps.Key)
+	}
+	param.SetType(ps.Type)
+	err = validateType(ps.Type)
+	if err != nil {
+		return err
+	}
+	putParamRegion = ps.Region
+	return nil
+}
+
 func multiLinePut() bool {
 	// Set the prompt explicitly rather than use SetMultiPrompt
 	// due to the unexpected 2nd line behavior
 	shell.SetPrompt("... ")
 	defer setPrompt(ps.Cwd)
+
 	shell.Println("Input options. End with a blank line.")
 	str := shell.ReadMultiLinesFunc(putOptions)
 	if str == "" {
@@ -160,27 +183,27 @@ func validateValue(s string) (err error) {
 
 func validateName(s string) (err error) {
 	if strings.HasPrefix(s, parameterstore.Delimiter) {
-		putParamInput.Name = aws.String(s)
+		putParamInput.SetName(s)
 	} else {
-		putParamInput.Name = aws.String(ps.Cwd + parameterstore.Delimiter + s)
+		putParamInput.SetName(ps.Cwd + parameterstore.Delimiter + s)
 	}
 	return nil
 }
 
 func validateDescription(s string) (err error) {
-	putParamInput.Description = aws.String(s)
+	putParamInput.SetDescription(s)
 	return nil
 }
 
 // TODO validate key
 func validateKey(s string) (err error) {
-	putParamInput.KeyId = aws.String(s)
+	putParamInput.SetKeyId(s)
 	return nil
 }
 
 // TODO validate pattern
 func validatePattern(s string) (err error) {
-	putParamInput.AllowedPattern = aws.String(s)
+	putParamInput.SetAllowedPattern(s)
 	return nil
 }
 
@@ -190,7 +213,7 @@ func validateOverwrite(s string) (err error) {
 		shell.Println("overwrite must be true or false")
 		return err
 	}
-	putParamInput.Overwrite = aws.Bool(overwrite)
+	putParamInput.SetOverwrite(overwrite)
 	return nil
 }
 

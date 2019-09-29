@@ -15,6 +15,7 @@ func cp(c *ishell.Context) {
 	if len(paths) != 2 {
 		shell.Println("Expected src and dst")
 		shell.Println(cpUsage)
+		return
 	}
 	err := ps.Copy(parsePath(paths[0]), parsePath(paths[1]), recurse)
 	if err != nil {

@@ -114,6 +114,27 @@
   pruneopts = ""
   revision = "a129542de9ae0895210abff9c95d67a1f33cb93d"
 
+[[projects]]
+  digest = "1:bb864e9881b2c241fc6348ba5ed57e6ccf8a675903f1f5c3d81c1b3d7cc4b8f8"
+  name = "gopkg.in/gcfg.v1"
+  packages = [
+    ".",
+    "scanner",
+    "token",
+    "types",
+  ]
+  pruneopts = ""
+  revision = "61b2c08bc8f6068f7c5ca684372f9a6cb1c45ebe"
+  version = "v1.2.3"
+
+[[projects]]
+  digest = "1:ceec7e96590fb8168f36df4795fefe17051d4b0c2acc7ec4e260d8138c4dafac"
+  name = "gopkg.in/warnings.v0"
+  packages = ["."]
+  pruneopts = ""
+  revision = "ec4a0fea49c7b46c2aeb0b51aac55779c607e52b"
+  version = "v0.1.2"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -124,6 +145,7 @@
     "github.com/aws/aws-sdk-go/service/ssm",
     "github.com/aws/aws-sdk-go/service/ssm/ssmiface",
     "github.com/mattn/go-shellwords",
+    "gopkg.in/gcfg.v1",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
