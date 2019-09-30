@@ -71,7 +71,7 @@ dev/
 /dev/db/username
 /> ls /dev/app
 url
-/dev>
+/>
 ```
 
 ### Change dir and list from current working dir
