@@ -17,6 +17,7 @@ Set the KMS key ARN (or ID) to use with SecureString parameters
 func key(c *ishell.Context) {
 	if len(c.Args) != 1 {
 		shell.Println(keyUsage)
+		return
 	}
 	if err := checkKey(c.Args[0]); err != nil {
 		shell.Println(err)

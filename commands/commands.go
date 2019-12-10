@@ -13,9 +13,9 @@ var shell *ishell.Shell
 var ps *parameterstore.ParameterStore
 
 // Init initializes the ssmsh subcommands
-func Init(_shell *ishell.Shell, _ps *parameterstore.ParameterStore) {
-	shell = _shell
-	ps = _ps
+func Init(iShell *ishell.Shell, iPs *parameterstore.ParameterStore) {
+	shell = iShell
+	ps = iPs
 	registerCommand("cd", "change your relative location within the parameter store", cd, cdUsage)
 	registerCommand("cp", "copy source to dest", cp, cpUsage)
 	registerCommand("decrypt", "toggle parameter decryption", decrypt, decryptUsage)
@@ -32,6 +32,7 @@ func Init(_shell *ishell.Shell, _ps *parameterstore.ParameterStore) {
 	setPrompt(parameterstore.Delimiter)
 }
 
+// registerCommand adds a command to the shell
 func registerCommand(name string, helpText string, f fn, usageText string) {
 	shell.AddCmd(&ishell.Cmd{
 		Name:     name,
@@ -41,14 +42,17 @@ func registerCommand(name string, helpText string, f fn, usageText string) {
 	})
 }
 
+// setPrompt configures the shell prompt
 func setPrompt(prompt string) {
 	shell.SetPrompt(prompt + ">")
 }
 
+// remove deletes an element from a slice of strings
 func remove(slice []string, i int) []string {
 	return append(slice[:i], slice[i+1:]...)
 }
 
+// checkRecursion searches a slice of strings for an element matching -r or -R
 func checkRecursion(paths []string) ([]string, bool) {
 	for i, p := range paths {
 		if strings.EqualFold(p, "-r") {
@@ -59,6 +63,7 @@ func checkRecursion(paths []string) ([]string, bool) {
 	return paths, false
 }
 
+// parsePath determines whether a path includes a region
 func parsePath(path string) (parameterPath parameterstore.ParameterPath) {
 	var pathParts []string
 	pathParts = strings.Split(path, ":")

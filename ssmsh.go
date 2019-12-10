@@ -44,7 +44,7 @@ func main() {
 	commands.Init(shell, &ps)
 
 	if *file == "-" {
-		processStdin(shell, *file)
+		processStdin(shell)
 	} else if *file != "" {
 		processFile(shell, *file)
 	} else if len(flag.Args()) > 1 {
@@ -55,7 +55,7 @@ func main() {
 	shell.Close()
 }
 
-func processStdin(shell *ishell.Shell, fn string) {
+func processStdin(shell *ishell.Shell) {
 	data, err := ioutil.ReadAll(os.Stdin)
 	if err != nil {
 		shell.Println("Error reading from stdin:", err)

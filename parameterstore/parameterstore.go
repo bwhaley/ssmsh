@@ -434,12 +434,6 @@ func (ps *ParameterStore) copyPathToPath(newPath bool, srcPath, dstPath Paramete
 
 // makeParameterMap returns a map of source param name to dest param name
 func makeParameterMap(params []*ssm.Parameter, newPath bool, srcPath, dstPath ParameterPath) (sourceToDst map[ParameterPath]ParameterPath) {
-	/*
-		sample input:
-			params: [/House/Stark/JonSnow /House/Stark/Special/Bran]
-			srcPath: /House/Stark
-			dstPath: /House/Targaryen
-	*/
 	sourceToDst = make(map[ParameterPath]ParameterPath)
 	for _, p := range params {
 		srcParam := ParameterPath{
