@@ -13,9 +13,9 @@ ifeq "$(VERSION)" ""
 endif
 
 
-GOVERSION := $(shell go version | grep 1.12)
+GOVERSION := $(shell go version | grep 1.13)
 ifeq "$(GOVERSION)" ""
-    $(error must be running Go version 1.12.x)
+    $(error must be running Go version 1.13.x)
 endif
 
 all: test build

@@ -249,7 +249,7 @@ $ ssmsh put name=/dev/app/domain value="www.example.com" type=String description
 MIT
 
 ## Contributing/compiling
-1. Ensure you have at least go v1.12
+1. Ensure you have at least go v1.13
 ```
 $ go version
 go version go1.12 linux/amd64
