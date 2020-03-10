@@ -19,6 +19,7 @@ func decrypt(c *ishell.Context) {
 		v, err := strconv.ParseBool(c.Args[0])
 		if err != nil {
 			shell.Println(decryptError)
+			return
 		}
 
 		switch v {
