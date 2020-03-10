@@ -26,7 +26,7 @@ $(FGT):
 
 GOLINT := $(GOPATH)/bin/golint
 $(GOLINT):
-	go get github.com/golang/lint/golint
+	go get golang.org/x/lint
 
 DEP := $(GOPATH)/bin/dep
 $(DEP):
