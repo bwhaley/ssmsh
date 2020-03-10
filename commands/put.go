@@ -23,9 +23,9 @@ Example of inline put:
 Example of multiline put:
 />put
 ... name=/House/Lannister/Cersei
-... value="Queen"
-... type="String"
-... description="Queen of the Seven Kingdoms"
+... value=Queen
+... type=String
+... description=Queen of the Seven Kingdoms
 ... key=arn:aws:kms:us-west-2:012345678901:key/321examp-ed00-427f-9729-748ba2254794
 ... overwrite=true
 ... pattern=[A-z]+
@@ -121,7 +121,6 @@ func inlinePut(options []string) bool {
 
 func putOptions(s string) bool {
 	if s == "" {
-		shell.Println("no input")
 		return false
 	}
 	paramOption := strings.Split(s, "=")
@@ -131,7 +130,7 @@ func putOptions(s string) bool {
 		return false
 	}
 	field := strings.ToLower(paramOption[0])
-	val := strings.Join(paramOption[1:], "=")
+	val := strings.Join(paramOption[1:], "=") // Handles the case where a value has an "=" character
 	err := validate(field, val)
 	if err != nil {
 		shell.Println(err)
@@ -177,8 +176,20 @@ func validateType(s string) (err error) {
 }
 
 func validateValue(s string) (err error) {
+	s = trimSpaces(s)
 	putParamInput.Value = aws.String(s)
 	return nil
+}
+
+// trimSpaces works around an issue in ishell where a space is added to the end of each line in a multiline value
+// https://github.com/abiosoft/ishell/issues/132
+func trimSpaces(s string) string {
+	parts := strings.Split(s, "\n")
+	for i := 0; i < len(parts)-1; i++ {
+		size := len(parts[i])
+		parts[i] = parts[i][:size-1]
+	}
+	return strings.Join(parts, "\n")
 }
 
 func validateName(s string) (err error) {
@@ -222,8 +233,10 @@ func validateRegion(s string) (err error) {
 	return nil
 }
 
-const StandardTier = "Standard"
-const AdvancedTier = "Advanced"
+const (
+	StandardTier = "Standard"
+	AdvancedTier = "Advanced"
+)
 
 func validateTier(s string) (err error) {
 	if strings.ToLower(s) == StandardTier || strings.ToLower(s) == AdvancedTier {
