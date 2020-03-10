@@ -28,11 +28,12 @@ NoChangeNotification(After=90,Unit=days)
 See https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-policies.html
 `
 
-const ExpirationPolicy = "Expiration"
-const ExpirationNotificationPolicy = "ExpirationNotification"
-const NoChangeNotificationPolicy = "NoChangeNotification"
-
-const layout = "2006-01-02T15:04:05Z"
+const (
+	ExpirationPolicy             = "Expiration"
+	ExpirationNotificationPolicy = "ExpirationNotification"
+	NoChangeNotificationPolicy   = "NoChangeNotification"
+	layout                       = "2006-01-02T15:04:05Z"
+)
 
 var policies = map[string]parameterPolicies{}
 
