@@ -252,7 +252,7 @@ MIT
 1. Ensure you have at least go v1.13
 ```
 $ go version
-go version go1.12 linux/amd64
+go version go1.13.8 darwin/amd64
 ```
 2. Ensure your `$GOPATH` exists and is in your `$PATH`
 ```
