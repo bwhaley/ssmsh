@@ -181,6 +181,15 @@ Single line version:
 /> put name=/dev/app/domain value="www.example.com" type=String description="The domain of the app in dev"
 ```
 
+Put with a value containing line breaks:
+
+```
+/>put name=/secrets/key/private type=SecureString value="-----BEGIN RSA PRIVATE KEY-----\
+... data\
+... -----END RSA PRIVATE KEY-----"
+Put /secrets/key/private version 1
+```
+
 ### Advanced parameters with policies
 Use [parameter policies](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-policies.html) to do things like expire (automatically delete) parameters at a specified time:
 ```bash
