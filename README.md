@@ -29,12 +29,14 @@ decrypt=true
 profile=my-profile
 region=us-east-1
 key=3example-89a6-4880-b544-73ad3db2ff3b
+output=json
 ```
 
 A few notes on configuration:
 * When setting the region, the `AWS_REGION` env var takes top priority, followed by the setting in `.ssmshrc`, followed by the value set in the AWS profile (if configured)
 * When setting the profile, the `AWS_PROFILE` env var takes top priority, followed by the setting in `.ssmshrc`
 * If you set a KMS key, it will only work in the region where that key is located. You can use the `key` command while in the shell to change the key.
+* If the configuration file has `output=json`, the results of the `get` and `history` commands will be printed in JSON. The fields of the JSON results will be the same as in the respective Go structs. See the [`Parameter`](https://docs.aws.amazon.com/sdk-for-go/api/service/ssm/#Parameter) and [`ParameterHistory`](https://docs.aws.amazon.com/sdk-for-go/api/service/ssm/#ParameterHistory) docs.
 
 ## Usage
 ### Help

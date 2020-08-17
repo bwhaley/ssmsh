@@ -18,6 +18,7 @@ type Config struct {
 		Region    string
 		Overwrite bool
 		Type      string
+		Output    string
 	}
 }
 
