@@ -51,8 +51,8 @@ func main() {
 		shell.Process(flag.Args()...)
 	} else {
 		shell.Run()
+		shell.Close()
 	}
-	shell.Close()
 }
 
 func processStdin(shell *ishell.Shell) {
