@@ -21,6 +21,6 @@ func history(c *ishell.Context) {
 	if err != nil {
 		shell.Println("Error: ", err)
 	} else {
-		shell.Printf("%+v\n", resp)
+		printResult(resp)
 	}
 }

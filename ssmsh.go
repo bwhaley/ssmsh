@@ -41,7 +41,7 @@ func main() {
 		shell.Println("Error initializing session. Is your authentication correct?", err)
 		os.Exit(1)
 	}
-	commands.Init(shell, &ps)
+	commands.Init(shell, &ps, &cfg)
 
 	if *file == "-" {
 		processStdin(shell)

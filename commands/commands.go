@@ -1,21 +1,27 @@
 package commands
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/abiosoft/ishell"
+	"github.com/bwhaley/ssmsh/config"
 	"github.com/bwhaley/ssmsh/parameterstore"
 )
 
 type fn func(*ishell.Context)
 
-var shell *ishell.Shell
-var ps *parameterstore.ParameterStore
+var (
+	shell *ishell.Shell
+	ps    *parameterstore.ParameterStore
+	cfg   *config.Config
+)
 
 // Init initializes the ssmsh subcommands
-func Init(iShell *ishell.Shell, iPs *parameterstore.ParameterStore) {
+func Init(iShell *ishell.Shell, iPs *parameterstore.ParameterStore, iCfg *config.Config) {
 	shell = iShell
 	ps = iPs
+	cfg = iCfg
 	registerCommand("cd", "change your relative location within the parameter store", cd, cdUsage)
 	registerCommand("cp", "copy source to dest", cp, cpUsage)
 	registerCommand("decrypt", "toggle parameter decryption", decrypt, decryptUsage)
@@ -92,4 +98,22 @@ func trim(with []string) (without []string) {
 		without = append(without, strings.TrimSpace(with[i]))
 	}
 	return without
+}
+
+func printResult(result interface{}) {
+	switch cfg.Default.Output {
+	case "json":
+		printJSON(result)
+	default:
+		shell.Printf("%+v\n", result)
+	}
+}
+
+func printJSON(result interface{}) {
+	resultJSON, err := json.MarshalIndent(result, "", "    ")
+	if err != nil {
+		shell.Println("Error with result: ", err)
+	} else {
+		shell.Println(string(resultJSON))
+	}
 }

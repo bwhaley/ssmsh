@@ -270,7 +270,6 @@ func validatePolicies(s string) (err error) {
 		}
 	}
 	policyBytes, err := json.Marshal(policySet)
-	// shell.Printf("Policies: %v\n", string(policyBytes))
 	putParamInput.Policies = aws.String(string(policyBytes))
 	putParamInput.Tier = aws.String(AdvancedTier)
 	return nil

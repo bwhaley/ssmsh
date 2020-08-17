@@ -24,7 +24,7 @@ func get(c *ishell.Context) {
 				shell.Println("Error: ", err)
 			} else {
 				if len(resp) >= 1 {
-					shell.Printf("%+v\n", resp)
+					printResult(resp)
 				}
 			}
 		}
