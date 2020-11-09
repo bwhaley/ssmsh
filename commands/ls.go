@@ -45,7 +45,7 @@ func list(path string, recurse bool) ([]string, error) {
 	signal.Notify(sigs, syscall.SIGINT)
 
 	quit := make(chan bool)
-	lr := make(chan parameterstore.ListResult, 0)
+	lr := make(chan parameterstore.ListResult)
 	go func() {
 		parameterPath := parsePath(path)
 		ps.List(parameterPath, recurse, lr, quit)

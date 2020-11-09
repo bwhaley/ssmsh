@@ -218,7 +218,6 @@ func (ps *ParameterStore) recursiveDelete(path ParameterPath) (err error) {
 
 // deleteByRegion groups parameters by region before calling delete()
 func (ps *ParameterStore) deleteByRegion(params []ParameterPath) (err error) {
-	const maxParams = 10
 	paramsByRegion := make(map[string][]string)
 	for _, p := range params {
 		paramsByRegion[p.Region] = append(paramsByRegion[p.Region], p.Name)
@@ -500,10 +499,7 @@ func (ps *ParameterStore) isParameter(param ParameterPath) bool {
 		Name: aws.String(param.Name),
 	}
 	_, err := ps.Clients[param.Region].GetParameter(p)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // isPath checks for the existence of at least one key under path

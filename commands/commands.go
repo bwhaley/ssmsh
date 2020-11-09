@@ -71,8 +71,7 @@ func checkRecursion(paths []string) ([]string, bool) {
 
 // parsePath determines whether a path includes a region
 func parsePath(path string) (parameterPath parameterstore.ParameterPath) {
-	var pathParts []string
-	pathParts = strings.Split(path, ":")
+	pathParts := strings.Split(path, ":")
 	switch len(pathParts) {
 	case 1:
 		parameterPath.Name = pathParts[0]
