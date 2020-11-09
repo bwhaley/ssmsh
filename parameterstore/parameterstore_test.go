@@ -219,7 +219,7 @@ func TestMoveParameter(t *testing.T) {
 	}
 	_, err = p.Get([]string{dstParam.Name}, p.Region)
 	if err != nil {
-		msg := fmt.Errorf("Expected to find %s but didn't!", dstParam.Name)
+		msg := fmt.Errorf("Expected to find %s but didn't", dstParam.Name)
 		t.Fatal(msg)
 	}
 }
