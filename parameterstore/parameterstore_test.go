@@ -47,10 +47,6 @@ var HouseStark = []*ssm.Parameter{
 	RobStark,
 }
 
-var HouseStarkNext = []*ssm.Parameter{
-	JonSnow,
-}
-
 var HouseTargaryen = []*ssm.Parameter{
 	DaenerysTargaryen,
 }
@@ -116,7 +112,10 @@ func (m mockedSSM) PutParameter(in *ssm.PutParameterInput) (*ssm.PutParameterOut
 func TestPut(t *testing.T) {
 	var expectedVersion int64 = 1
 	var p parameterstore.ParameterStore
-	p.NewParameterStore()
+	err := p.NewParameterStore(false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	p.Cwd = parameterstore.Delimiter
 	p.Clients[p.Region] = mockedSSM{
 		PutParameterResp: ssm.PutParameterOutput{
@@ -151,7 +150,10 @@ func TestMoveParameter(t *testing.T) {
 	}
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	p.NewParameterStore()
+	err := p.NewParameterStore(false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	p.Cwd = parameterstore.Delimiter
 	p.Clients[p.Region] = mockedSSM{
 		GetParameterResp: []ssm.GetParameterOutput{
@@ -189,7 +191,7 @@ func TestMoveParameter(t *testing.T) {
 			},
 		},
 	}
-	err := p.Move(srcParam, dstParam)
+	err = p.Move(srcParam, dstParam)
 	if err != nil {
 		t.Fatal("Error moving parameter", err)
 	}
@@ -217,7 +219,7 @@ func TestMoveParameter(t *testing.T) {
 	}
 	_, err = p.Get([]string{dstParam.Name}, p.Region)
 	if err != nil {
-		msg := fmt.Errorf("Expected to find %s but didn't!", dstParam.Name)
+		msg := fmt.Errorf("Expected to find %s but didn't", dstParam.Name)
 		t.Fatal(msg)
 	}
 }
@@ -234,7 +236,10 @@ func TestCopyPath(t *testing.T) {
 
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	p.NewParameterStore()
+	err := p.NewParameterStore(false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	p.Cwd = parameterstore.Delimiter
 	bothHouses := append(HouseStark, HouseTargaryen...)
 	p.Clients[p.Region] = mockedSSM{
@@ -263,7 +268,7 @@ func TestCopyPath(t *testing.T) {
 			NextToken: aws.String(""),
 		},
 	}
-	err := p.Copy(srcPath, dstPath, true)
+	err = p.Copy(srcPath, dstPath, true)
 	if err != nil {
 		t.Fatal("Error copying parameter path: ", err)
 	}
@@ -292,7 +297,10 @@ func TestCopyParameter(t *testing.T) {
 	}
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	p.NewParameterStore()
+	err := p.NewParameterStore(false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	p.Cwd = parameterstore.Delimiter
 	p.Clients[p.Region] = mockedSSM{
 		GetParameterResp: []ssm.GetParameterOutput{
@@ -330,7 +338,7 @@ func TestCopyParameter(t *testing.T) {
 			},
 		},
 	}
-	err := p.Copy(srcParam, dstParam, false)
+	err = p.Copy(srcParam, dstParam, false)
 	if err != nil {
 		t.Fatal("Error copying parameter", err)
 	}
@@ -376,13 +384,16 @@ func TestCwd(t *testing.T) {
 
 	var p parameterstore.ParameterStore
 	for _, c := range cases {
-		p.NewParameterStore()
+		err := p.NewParameterStore(false)
+		if err != nil {
+			t.Fatal("unexpected error", err)
+		}
 		p.Region = "region"
 		p.Cwd = parameterstore.Delimiter
 		p.Clients[p.Region] = mockedSSM{
 			GetParametersByPathResp: c.GetParametersByPathResp,
 		}
-		err := p.SetCwd(parameterstore.ParameterPath{Name: c.Path, Region: "region"})
+		err = p.SetCwd(parameterstore.ParameterPath{Name: c.Path, Region: "region"})
 		if err != nil {
 			t.Fatal("unexpected error", err)
 		}
@@ -392,13 +403,16 @@ func TestCwd(t *testing.T) {
 		}
 	}
 
-	p.NewParameterStore()
+	err := p.NewParameterStore(false)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
 	p.Cwd = parameterstore.Delimiter
 	testDir := parameterstore.ParameterPath{
 		Name:   "/nodir",
 		Region: "region",
 	}
-	err := p.SetCwd(testDir)
+	err = p.SetCwd(testDir)
 	if err == nil {
 		msg := fmt.Errorf("Expected error for dir %s, got cwd %s ", testDir, p.Cwd)
 		t.Fatal(msg)
@@ -432,11 +446,14 @@ func TestDelete(t *testing.T) {
 
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	p.NewParameterStore()
+	err := p.NewParameterStore(false)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
 	p.Clients[p.Region] = mockedSSM{
 		DeleteParametersResp: deleteParametersOutput,
 	}
-	err := p.Remove(testParams, false)
+	err = p.Remove(testParams, false)
 	if err == nil {
 		msg := fmt.Errorf("Expected error for param %s, got %v ", testParams[2], err)
 		t.Fatal(msg)
@@ -463,7 +480,10 @@ func TestGetHistory(t *testing.T) {
 	}
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	p.NewParameterStore()
+	err := p.NewParameterStore(false)
+	if err != nil {
+		t.Fatal("unexpected error", err)
+	}
 	p.Clients[p.Region] = mockedSSM{
 		GetParameterHistoryResp: getHistoryOutput,
 	}
@@ -571,7 +591,10 @@ func TestList(t *testing.T) {
 	for _, c := range cases {
 		var p parameterstore.ParameterStore
 		p.Region = "region"
-		p.NewParameterStore()
+		err := p.NewParameterStore(false)
+		if err != nil {
+			t.Fatal("unexpected error", err)
+		}
 		p.Clients[p.Region] = mockedSSM{
 			GetParametersByPathResp: c.GetParametersByPathResp,
 			GetParametersByPathNext: c.GetParametersByPathNext,
@@ -579,7 +602,7 @@ func TestList(t *testing.T) {
 		}
 		p.Cwd = parameterstore.Delimiter
 
-		ch := make(chan parameterstore.ListResult, 0)
+		ch := make(chan parameterstore.ListResult)
 		quit := make(chan bool)
 		go func() {
 			p.List(c.Query, c.Recurse, ch, quit)

@@ -64,16 +64,18 @@ func (ps *ParameterStore) SetDefaults(cfg config.Config) {
 }
 
 // NewParameterStore initializes a ParameterStore with default values
-func (ps *ParameterStore) NewParameterStore() error {
+func (ps *ParameterStore) NewParameterStore(checkCredentials bool) error {
 	ps.Cwd = Delimiter
 
 	ps.Clients = make(map[string]ssmiface.SSMAPI)
 	ps.Clients[ps.Region] = ssm.New(saws.NewSession(ps.Region, ps.Profile))
 
-	// Check for a non-existent parameter to validate credentials & permissions
-	_, err := ps.Get([]string{Delimiter}, ps.Region)
-	if err != nil {
-		return err
+	if checkCredentials {
+		// Check for a non-existent parameter to validate credentials & permissions
+		_, err := ps.Get([]string{Delimiter}, ps.Region)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -218,7 +220,6 @@ func (ps *ParameterStore) recursiveDelete(path ParameterPath) (err error) {
 
 // deleteByRegion groups parameters by region before calling delete()
 func (ps *ParameterStore) deleteByRegion(params []ParameterPath) (err error) {
-	const maxParams = 10
 	paramsByRegion := make(map[string][]string)
 	for _, p := range params {
 		paramsByRegion[p.Region] = append(paramsByRegion[p.Region], p.Name)
@@ -500,10 +501,7 @@ func (ps *ParameterStore) isParameter(param ParameterPath) bool {
 		Name: aws.String(param.Name),
 	}
 	_, err := ps.Clients[param.Region].GetParameter(p)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // isPath checks for the existence of at least one key under path

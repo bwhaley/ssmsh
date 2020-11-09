@@ -30,5 +30,4 @@ func rm(c *ishell.Context) {
 	} else {
 		shell.Println(rmUsage, err)
 	}
-	return
 }

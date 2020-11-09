@@ -81,7 +81,10 @@ type NoChangeNotificationAttributes struct {
 
 func policy(c *ishell.Context) {
 	if len(c.Args) == 1 {
-		printPolicy(c.Args[0])
+		err := printPolicy(c.Args[0])
+		if err != nil {
+			shell.Printf("Error: %s\n", err)
+		}
 	} else if len(c.Args) > 1 {
 		err := createPolicy(c.Args[0], c.Args[1:])
 		if err != nil {
