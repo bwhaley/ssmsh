@@ -64,16 +64,18 @@ func (ps *ParameterStore) SetDefaults(cfg config.Config) {
 }
 
 // NewParameterStore initializes a ParameterStore with default values
-func (ps *ParameterStore) NewParameterStore() error {
+func (ps *ParameterStore) NewParameterStore(checkCredentials bool) error {
 	ps.Cwd = Delimiter
 
 	ps.Clients = make(map[string]ssmiface.SSMAPI)
 	ps.Clients[ps.Region] = ssm.New(saws.NewSession(ps.Region, ps.Profile))
 
-	// Check for a non-existent parameter to validate credentials & permissions
-	_, err := ps.Get([]string{Delimiter}, ps.Region)
-	if err != nil {
-		return err
+	if checkCredentials {
+		// Check for a non-existent parameter to validate credentials & permissions
+		_, err := ps.Get([]string{Delimiter}, ps.Region)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

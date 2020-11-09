@@ -18,7 +18,7 @@ func region(c *ishell.Context) {
 		}
 	} else if len(c.Args) == 1 {
 		ps.Region = c.Args[0]
-		err := ps.NewParameterStore()
+		err := ps.NewParameterStore(true)
 		if err != nil {
 			shell.Printf("Error: %s", err)
 		}

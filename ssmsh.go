@@ -36,7 +36,7 @@ func main() {
 	shell := ishell.New()
 	var ps parameterstore.ParameterStore
 	ps.SetDefaults(cfg)
-	err = ps.NewParameterStore()
+	err = ps.NewParameterStore(true)
 	if err != nil {
 		shell.Println("Error initializing session. Is your authentication correct?", err)
 		os.Exit(1)

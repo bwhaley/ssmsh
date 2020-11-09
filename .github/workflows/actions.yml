@@ -5,6 +5,7 @@ on:
 
 env:
   SSMSH_VERSION: 1.4.3
+  AWS_DEFAULT_REGION: us-east-1
 
 jobs:
   lint:

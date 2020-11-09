@@ -112,7 +112,7 @@ func (m mockedSSM) PutParameter(in *ssm.PutParameterInput) (*ssm.PutParameterOut
 func TestPut(t *testing.T) {
 	var expectedVersion int64 = 1
 	var p parameterstore.ParameterStore
-	err := p.NewParameterStore()
+	err := p.NewParameterStore(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestMoveParameter(t *testing.T) {
 	}
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	err := p.NewParameterStore()
+	err := p.NewParameterStore(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +236,7 @@ func TestCopyPath(t *testing.T) {
 
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	err := p.NewParameterStore()
+	err := p.NewParameterStore(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -297,7 +297,7 @@ func TestCopyParameter(t *testing.T) {
 	}
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	err := p.NewParameterStore()
+	err := p.NewParameterStore(false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,7 +384,7 @@ func TestCwd(t *testing.T) {
 
 	var p parameterstore.ParameterStore
 	for _, c := range cases {
-		err := p.NewParameterStore()
+		err := p.NewParameterStore(false)
 		if err != nil {
 			t.Fatal("unexpected error", err)
 		}
@@ -403,7 +403,7 @@ func TestCwd(t *testing.T) {
 		}
 	}
 
-	err := p.NewParameterStore()
+	err := p.NewParameterStore(false)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
@@ -446,7 +446,7 @@ func TestDelete(t *testing.T) {
 
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	err := p.NewParameterStore()
+	err := p.NewParameterStore(false)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
@@ -480,7 +480,7 @@ func TestGetHistory(t *testing.T) {
 	}
 	var p parameterstore.ParameterStore
 	p.Region = "region"
-	err := p.NewParameterStore()
+	err := p.NewParameterStore(false)
 	if err != nil {
 		t.Fatal("unexpected error", err)
 	}
@@ -591,7 +591,7 @@ func TestList(t *testing.T) {
 	for _, c := range cases {
 		var p parameterstore.ParameterStore
 		p.Region = "region"
-		err := p.NewParameterStore()
+		err := p.NewParameterStore(false)
 		if err != nil {
 			t.Fatal("unexpected error", err)
 		}
