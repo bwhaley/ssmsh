@@ -12,9 +12,9 @@ ifeq "$(VERSION)" ""
     $(error must define SSMSH_VERSION env var)
 endif
 
-GOVERSION := $(shell go version | grep 1.13)
+GOVERSION := $(shell go version | grep 1.15)
 ifeq "$(GOVERSION)" ""
-    $(error must be running Go version 1.13.x)
+    $(error must be running Go version 1.15.x)
 endif
 
 ifndef $(GOPATH)

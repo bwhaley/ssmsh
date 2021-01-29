@@ -260,10 +260,10 @@ $ ssmsh put name=/dev/app/domain value="www.example.com" type=String description
 MIT
 
 ## Contributing/compiling
-1. Ensure you have at least go v1.13
+1. Ensure you have at least go v1.15
 ```
 $ go version
-go version go1.13.8 darwin/amd64
+go version go1.15.7 darwin/amd64
 ```
 2. Ensure your `$GOPATH` exists and is in your `$PATH`
 ```

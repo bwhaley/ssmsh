@@ -1,6 +1,6 @@
 module github.com/bwhaley/ssmsh
 
-go 1.13
+go 1.15
 
 require (
 	github.com/abiosoft/ishell v2.0.1-0.20181228190644-8b8aa74a8512+incompatible
