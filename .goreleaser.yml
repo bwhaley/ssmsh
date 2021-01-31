@@ -1,0 +1,34 @@
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+
+archives:
+  - format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - none*
+
+changelog:
+  sort: asc
+
+brews:
+  - tap:
+      owner: bwhaley
+      name: ssmsh
+    description: A shell for the EC2 Parameter Store
+    homepage: https://github.com/bwhaley/ssmsh
+    license: MIT

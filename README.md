@@ -11,13 +11,32 @@ ssmsh is an interactive shell for the EC2 Parameter Store. Features:
 * Submit batch commands with the `-file` flag
 * Inline commands
 
-
 ## Installation
 
-1. Download [here](https://github.com/bwhaley/ssmsh/releases) or clone and build from this repo.
-2. Set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
+### Binaries
+
+Download binaries for MacOS, Linux, or Windows from the latest release [here](https://github.com/bwhaley/ssmsh/releases).
+
+### Homebrew
+
+There is a Homebrew tap published to this repo, for installation on both MacOS and Linux. Add the tap and install with:
+
+```bash
+brew tap bwhaley/ssmsh https://github.com/bwhaley/ssmsh
+brew install ssmsh
+```
+
+### Nix
+
+There is also [a Nix package](https://search.nixos.org/packages?channel=unstable&show=ssmsh&query=ssmsh) available for MacOS and Linux:
+
+```bash
+nix-env -i ssmsh
+```
 
 ## Configuration
+
+Set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
 
 You can set up a `.ssmshrc` to configure `ssmsh`. By default, `ssmsh` will load `~/.ssmshrc` if it exists. Use the `-config` argument to set a different path.
 
