@@ -9,7 +9,7 @@ GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null)
 
 VERSION := $(shell echo ${SSMSH_VERSION})
 ifeq "$(VERSION)" ""
-    $(error must define SSMSH_VERSION env var)
+    VERSION="auto-build"
 endif
 
 GOVERSION := $(shell go version | grep 1.15)
