@@ -5,17 +5,17 @@
 class Ssmsh < Formula
   desc "A shell for the EC2 Parameter Store"
   homepage "https://github.com/bwhaley/ssmsh"
-  version "1.4.5-alpha-test"
+  version "1.4.5"
   license "MIT"
   bottle :unneeded
 
   if OS.mac?
-    url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.5-alpha-test/ssmsh_1.4.5-alpha-test_darwin_amd64.tar.gz"
-    sha256 "69f0c9cb00eeca50d33b162e31c2f8dfa68f72e575fa2381cd404ef8748ba543"
+    url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.5/ssmsh_1.4.5_darwin_amd64.tar.gz"
+    sha256 "057684585f48e3f9fe027c462a049b9f7da50ea9fae53af451a69c48c923260b"
   end
   if OS.linux? && Hardware::CPU.intel?
-    url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.5-alpha-test/ssmsh_1.4.5-alpha-test_linux_amd64.tar.gz"
-    sha256 "c64233b8df29edea766c10912604cd047978a8d7bbb71079d99cdbfe965a73cb"
+    url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.5/ssmsh_1.4.5_linux_amd64.tar.gz"
+    sha256 "7ddc12b9cfcd30ecf049671df722fb76557b2a9c5b68dab4cf3769ddd0aca0cc"
   end
 
   def install
