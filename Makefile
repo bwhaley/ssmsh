@@ -9,12 +9,12 @@ GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null)
 
 VERSION := $(shell echo ${SSMSH_VERSION})
 ifeq "$(VERSION)" ""
-    $(error must define SSMSH_VERSION env var)
+    VERSION="auto-build"
 endif
 
-GOVERSION := $(shell go version | grep 1.13)
+GOVERSION := $(shell go version | grep 1.15)
 ifeq "$(GOVERSION)" ""
-    $(error must be running Go version 1.13.x)
+    $(error must be running Go version 1.15.x)
 endif
 
 ifndef $(GOPATH)
