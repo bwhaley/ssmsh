@@ -7,7 +7,6 @@ class Ssmsh < Formula
   homepage "https://github.com/bwhaley/ssmsh"
   version "1.4.5"
   license "MIT"
-  bottle :unneeded
 
   if OS.mac?
     url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.5/ssmsh_1.4.5_darwin_amd64.tar.gz"
