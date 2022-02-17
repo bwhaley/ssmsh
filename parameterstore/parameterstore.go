@@ -15,7 +15,10 @@ import (
 )
 
 // Delimiter is the parameter path separator character
-const Delimiter = "/"
+const (
+	Delimiter            = "/"
+	DefaultParameterType = "SecureString"
+)
 
 // ParameterStore represents the current state and preferences of the shell
 type ParameterStore struct {
@@ -53,6 +56,8 @@ func (ps *ParameterStore) SetDefaults(cfg config.Config) {
 
 	if cfg.Default.Type != "" {
 		ps.Type = cfg.Default.Type
+	} else {
+		ps.Type = DefaultParameterType
 	}
 
 	// The value in the $AWS_REGION env var is most preferred
