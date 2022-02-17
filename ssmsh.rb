@@ -5,13 +5,21 @@
 class Ssmsh < Formula
   desc "A shell for the EC2 Parameter Store"
   homepage "https://github.com/bwhaley/ssmsh"
-  version "1.4.8"
+  version "1.4.7"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.8/ssmsh_1.4.8_darwin_amd64.tar.gz"
-      sha256 "4a78ed0d6c12b47807efbb369eb5b0736e23ac145fc7884c41d329a69579548f"
+      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_darwin_amd64.tar.gz"
+      sha256 "885c2a05611c7f79b75fc187f5f01abb5835f12e76a75beb79f34f4117d12dd3"
+
+      def install
+        bin.install "ssmsh"
+      end
+    end
+    if Hardware::CPU.arm?
+      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_darwin_arm64.tar.gz"
+      sha256 "0987f5636170faa3b780f3475d6bc84a778f8a156afb584137156d7888671f29"
 
       def install
         bin.install "ssmsh"
@@ -20,9 +28,17 @@ class Ssmsh < Formula
   end
 
   on_linux do
+    if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_linux_arm64.tar.gz"
+      sha256 "c57ad96c8a9bf78b715a6ccf9c2f29a20ee6a3c8a498e734da0ce6fbcb4f13a5"
+
+      def install
+        bin.install "ssmsh"
+      end
+    end
     if Hardware::CPU.intel?
-      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.8/ssmsh_1.4.8_linux_amd64.tar.gz"
-      sha256 "1bf95abbe547379ab94395fc57633eef3a11a2ae9004479e63db575a3751539f"
+      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_linux_amd64.tar.gz"
+      sha256 "9b68bc98984928bcfbdbe8948d5c82d0317370f09cb5f13e71a068e1ea8c64ba"
 
       def install
         bin.install "ssmsh"
