@@ -11,7 +11,7 @@ class Ssmsh < Formula
   on_macos do
     if Hardware::CPU.intel?
       url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_darwin_amd64.tar.gz"
-      sha256 "f5428d7a0abc0ddb18cb4330b8da1e859aeac7c9284041403f5f31bc39ffb0e0"
+      sha256 "3cfcbb13df937e660444c6a8c750ea23e3d928be15744a14d44b47568b7cdc77"
 
       def install
         bin.install "ssmsh"
@@ -22,7 +22,7 @@ class Ssmsh < Formula
   on_linux do
     if Hardware::CPU.intel?
       url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_linux_amd64.tar.gz"
-      sha256 "2dd8d5f28ae6b938daca02dcf0faac028575f4c938d51e8cf0ae5186c5072f48"
+      sha256 "0b1866cf8a989f2161384bcfe74868bf20cab0d46876c21347e3c6e1a9d27751"
 
       def install
         bin.install "ssmsh"
