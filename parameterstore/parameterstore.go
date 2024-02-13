@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
+	spath "path"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -497,7 +497,7 @@ func fqp(path string, cwd string) string {
 		// relative to cwd
 		dirtyPath = cwd + Delimiter + path
 	}
-	return filepath.Clean(dirtyPath)
+	return spath.Clean(dirtyPath)
 }
 
 // isParameter checks for the existence of a parameter
