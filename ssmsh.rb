@@ -5,21 +5,21 @@
 class Ssmsh < Formula
   desc "A shell for the EC2 Parameter Store"
   homepage "https://github.com/bwhaley/ssmsh"
-  version "1.4.7"
+  version "1.4.9"
   license "MIT"
 
   on_macos do
-    if Hardware::CPU.intel?
-      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_darwin_amd64.tar.gz"
-      sha256 "885c2a05611c7f79b75fc187f5f01abb5835f12e76a75beb79f34f4117d12dd3"
+    if Hardware::CPU.arm?
+      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.9/ssmsh_1.4.9_darwin_arm64.tar.gz"
+      sha256 "a82cbebe3991fddefdea953b3e2162a95583a7b329ab30b87920b766ccd4fd5a"
 
       def install
         bin.install "ssmsh"
       end
     end
-    if Hardware::CPU.arm?
-      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_darwin_arm64.tar.gz"
-      sha256 "0987f5636170faa3b780f3475d6bc84a778f8a156afb584137156d7888671f29"
+    if Hardware::CPU.intel?
+      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.9/ssmsh_1.4.9_darwin_amd64.tar.gz"
+      sha256 "45d5a592b2aba830f49296f2339d388469a9478873aba805581b84f4a2e98fd7"
 
       def install
         bin.install "ssmsh"
@@ -29,16 +29,16 @@ class Ssmsh < Formula
 
   on_linux do
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_linux_arm64.tar.gz"
-      sha256 "c57ad96c8a9bf78b715a6ccf9c2f29a20ee6a3c8a498e734da0ce6fbcb4f13a5"
+      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.9/ssmsh_1.4.9_linux_arm64.tar.gz"
+      sha256 "ebb1590b9be0cf5f5f90bea8fdfb5f462989ba4947586aed38c889aea9e896a0"
 
       def install
         bin.install "ssmsh"
       end
     end
     if Hardware::CPU.intel?
-      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.7/ssmsh_1.4.7_linux_amd64.tar.gz"
-      sha256 "9b68bc98984928bcfbdbe8948d5c82d0317370f09cb5f13e71a068e1ea8c64ba"
+      url "https://github.com/bwhaley/ssmsh/releases/download/v1.4.9/ssmsh_1.4.9_linux_amd64.tar.gz"
+      sha256 "880ce1fd987ce31e68ae582ab83c24f71e9b69319b6176a131bb73e3fe48abdf"
 
       def install
         bin.install "ssmsh"
