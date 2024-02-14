@@ -12,9 +12,9 @@ ifeq "$(VERSION)" ""
     VERSION="auto-build"
 endif
 
-GOVERSION := $(shell go version | grep 1.15)
+GOVERSION := $(shell go version | grep 1.17)
 ifeq "$(GOVERSION)" ""
-    $(error must be running Go version 1.15.x)
+    $(error must be running Go version 1.17.x)
 endif
 
 ifndef $(GOPATH)
@@ -54,7 +54,7 @@ vendor: $(DEP)
 	$(DEP) ensure
 
 build:
-	go build -i -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE) $(PROJECT)
+	go build -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE) $(PROJECT)
 build-linux:
 	GOOS=linux GOARCH=amd64 go build -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE)-linux-amd64
 build-darwin-amd64:
