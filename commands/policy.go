@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/abiosoft/ishell"
 )
 
 const policyUsage string = `
@@ -79,27 +77,26 @@ type NoChangeNotificationAttributes struct {
 	Unit  string
 }
 
-func policy(c *ishell.Context) {
+func policy(c *Context) error {
 	if len(c.Args) == 1 {
-		err := printPolicy(c.Args[0])
-		if err != nil {
-			shell.Printf("Error: %s\n", err)
-		}
-	} else if len(c.Args) > 1 {
-		err := createPolicy(c.Args[0], c.Args[1:])
-		if err != nil {
-			shell.Printf("Error: %s\n", err)
-		}
-	} else {
-		shell.Println(policyUsage)
+		return printPolicy(c.Args[0])
 	}
+	if len(c.Args) > 1 {
+		return createPolicy(c.Args[0], c.Args[1:])
+	}
+	return fmt.Errorf("usage: policy name [policies...]")
 }
 
 func printPolicy(policyName string) (err error) {
+	if _, ok := policies[policyName]; !ok {
+		return fmt.Errorf("unknown policy %q", policyName)
+	}
 	var policyPrinter strings.Builder
 	for pName, policy := range policies {
 		if pName == policyName {
-			fmt.Fprintf(&policyPrinter, "%s", policy.expiration.Print())
+			if policy.expiration != (Expiration{}) {
+				fmt.Fprintf(&policyPrinter, "%s", policy.expiration.Print())
+			}
 			for _, e := range policy.expirationNotification {
 				fmt.Fprintf(&policyPrinter, "%s", e.Print())
 			}
@@ -140,7 +137,7 @@ func (nochange NoChangeNotification) Print() string {
 func createPolicy(policyName string, policyArgs []string) (err error) {
 	var policy parameterPolicies
 	for _, arg := range policyArgs {
-		re := regexp.MustCompile(`^([A-Za-z]+)\(([A-z0-9-:\.,=]+)\)`)
+		re := regexp.MustCompile(`^([A-Za-z]+)\(([A-Za-z0-9-:\.,=]+)\)$`)
 		p := re.FindStringSubmatch(arg)
 		if len(p) != 3 {
 			return fmt.Errorf("unable to validate policy %s", arg)
@@ -167,7 +164,7 @@ func createPolicy(policyName string, policyArgs []string) (err error) {
 			}
 			policy.noChangeNotification = append(policy.noChangeNotification, *p)
 		default:
-			return fmt.Errorf("Unable to parse policy type %s with attributes %s", policyType, policyAttributes)
+			return fmt.Errorf("unable to parse policy type %s with attributes %s", policyType, policyAttributes)
 		}
 	}
 	policies[policyName] = policy
@@ -179,7 +176,10 @@ func parseExpiration(attrArgs string) (expiration *Expiration, err error) {
 	var attributes ExpirationAttributes
 	parts := trim(strings.Split(attrArgs, ","))
 	for _, p := range parts {
-		attrArg := trim(strings.Split(p, "="))
+		attrArg := trim(strings.SplitN(p, "=", 2))
+		if len(attrArg) != 2 || attrArg[1] == "" {
+			return nil, fmt.Errorf("invalid policy attribute %q", p)
+		}
 		switch strings.ToLower(attrArg[0]) {
 		case "timestamp":
 			str := attrArg[1]
@@ -200,7 +200,10 @@ func parseExpirationNotification(attrArgs string) (expNotification *ExpirationNo
 	var attributes ExpirationNotificationAttributes
 	parts := trim(strings.Split(attrArgs, ","))
 	for _, p := range parts {
-		attrArg := trim(strings.Split(p, "="))
+		attrArg := trim(strings.SplitN(p, "=", 2))
+		if len(attrArg) != 2 || attrArg[1] == "" {
+			return nil, fmt.Errorf("invalid policy attribute %q", p)
+		}
 		switch strings.ToLower(attrArg[0]) {
 		case "before":
 			attributes.Before, err = strconv.Atoi(attrArg[1])
@@ -222,7 +225,10 @@ func parseNoChangeNotification(attrArgs string) (noChange *NoChangeNotification,
 	var attributes NoChangeNotificationAttributes
 	parts := trim(strings.Split(attrArgs, ","))
 	for _, p := range parts {
-		attrArg := trim(strings.Split(p, "="))
+		attrArg := trim(strings.SplitN(p, "=", 2))
+		if len(attrArg) != 2 || attrArg[1] == "" {
+			return nil, fmt.Errorf("invalid policy attribute %q", p)
+		}
 		switch strings.ToLower(attrArg[0]) {
 		case "after":
 			attributes.After, err = strconv.Atoi(attrArg[1])

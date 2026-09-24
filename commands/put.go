@@ -2,278 +2,176 @@ package commands
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"regexp"
+	"io"
+	"os"
 	"strconv"
 	"strings"
 
-	"github.com/abiosoft/ishell"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/bwhaley/ssmsh/parameterstore"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
 
-// TODO Inline syntax
-const putUsage string = `usage: put <newline>
-Create or update parameters. Enter one option per line, ending with a blank line, or all
-options inline. All fields except name, value, and type are optional.
-Example of inline put:
-/> put name=/House/Targaryen/Daenerys value="Queen" type="String" description="Mother of dragons"
-Example of multiline put:
-/>put
-... name=/House/Lannister/Cersei
-... value=Queen
-... type=String
-... description=Queen of the Seven Kingdoms
-... key=arn:aws:kms:us-west-2:012345678901:key/321examp-ed00-427f-9729-748ba2254794
-... overwrite=true
-... pattern=[A-z]+
-... tier=advanced
-... policies=[policy1, policy2]
-...
-/>
-Use the policy command to create named policy objects. Tier defaults to standard unless policies are defined.
-`
+const putUsage = "put name=PATH (value=VALUE|value-file=FILE|value-stdin=true) [type=String|SecureString|StringList] [key=KEY] [region=REGION] [overwrite=true] [tier=Standard|Advanced|Intelligent-Tiering] [policies=[NAME,...]]"
 
-var putParamInput ssm.PutParameterInput
-var putParamRegion string
-
-// Add or update parameters
-func put(c *ishell.Context) {
-	var err error
-	var resp *ssm.PutParameterOutput
-
-	putParamInput = ssm.PutParameterInput{}
-	err = setDefaults(&putParamInput)
-	if err != nil {
-		shell.Println(err)
-		return
-	}
-
-	// Read args for values
-	var r bool
-	if len(c.Args) == 0 {
-		r = multiLinePut()
-	} else {
-		r = inlinePut(c.Args)
-	}
-	if !r {
-		return
-	}
-
-	if putParamInput.Name == nil ||
-		putParamInput.Value == nil ||
-		putParamInput.Type == nil {
-		shell.Println("Error: name, type and value are required.")
-		return
-	}
-
-	resp, err = ps.Put(&putParamInput, putParamRegion)
-	if err != nil {
-		shell.Println("Error: ", err)
-	} else {
-		version := strconv.Itoa(int(aws.Int64Value(resp.Version)))
-		if version != "" {
-			shell.Println("Put " + aws.StringValue(putParamInput.Name) + " version " + version)
+func put(c *Context) error {
+	options := c.Args
+	if len(options) == 0 {
+		if !Interactive {
+			return fmt.Errorf("usage: %s", putUsage)
+		}
+		shell.Println("Enter one name=value option per line; finish with an empty line.")
+		for {
+			if shell.readLine == nil {
+				return fmt.Errorf("interactive input is unavailable")
+			}
+			line, err := shell.readLine()
+			if err != nil {
+				return err
+			}
+			if line == "" {
+				break
+			}
+			options = append(options, line)
 		}
 	}
-}
-
-// setDefaults sets parameter settings according to the defaults
-func setDefaults(param *ssm.PutParameterInput) (err error) {
-	param.SetOverwrite(ps.Overwrite)
+	in := &ssm.PutParameterInput{Type: types.ParameterType(ps.Type), Overwrite: aws.Bool(ps.Overwrite)}
 	if ps.Key != "" {
-		param.SetKeyId(ps.Key)
+		in.KeyId = aws.String(ps.Key)
 	}
-	param.SetType(ps.Type)
-	err = validateType(ps.Type)
+	region := ps.Region
+	valueSet := false
+	for _, option := range options {
+		field, value, ok := strings.Cut(option, "=")
+		if !ok {
+			return fmt.Errorf("expected name=value option")
+		}
+		field = strings.ToLower(strings.TrimSpace(field))
+		switch field {
+		case "name":
+			if value == "" {
+				return fmt.Errorf("name cannot be empty")
+			}
+			in.Name = aws.String(ps.Resolve(value))
+		case "value", "value-file", "value-stdin":
+			if valueSet {
+				return fmt.Errorf("specify exactly one value source")
+			}
+			valueSet = true
+			switch field {
+			case "value-file":
+				data, err := os.ReadFile(value)
+				if err != nil {
+					return err
+				}
+				value = string(data)
+			case "value-stdin":
+				if value != "true" {
+					return fmt.Errorf("value-stdin must be true")
+				}
+				if BatchInput {
+					return fmt.Errorf("value-stdin cannot share stdin with batch commands")
+				}
+				data, err := io.ReadAll(SecretInput)
+				if err != nil {
+					return err
+				}
+				value = string(data)
+			}
+			in.Value = aws.String(value)
+		case "type":
+			switch strings.ToLower(value) {
+			case "string":
+				in.Type = types.ParameterTypeString
+			case "securestring":
+				in.Type = types.ParameterTypeSecureString
+			case "stringlist":
+				in.Type = types.ParameterTypeStringList
+			default:
+				return fmt.Errorf("invalid parameter type")
+			}
+		case "description":
+			in.Description = aws.String(value)
+		case "key":
+			in.KeyId = aws.String(value)
+		case "pattern":
+			in.AllowedPattern = aws.String(value)
+		case "region":
+			if value == "" {
+				return fmt.Errorf("region cannot be empty")
+			}
+			region = value
+		case "overwrite":
+			b, err := strconv.ParseBool(value)
+			if err != nil {
+				return fmt.Errorf("overwrite must be boolean")
+			}
+			in.Overwrite = aws.Bool(b)
+		case "tier":
+			tier, err := parseTier(value)
+			if err != nil {
+				return err
+			}
+			in.Tier = tier
+		case "policies":
+			policy, err := policyJSON(value)
+			if err != nil {
+				return err
+			}
+			in.Policies = aws.String(policy)
+		default:
+			return fmt.Errorf("unknown put option %q", field)
+		}
+	}
+	if in.Name == nil || in.Value == nil {
+		return fmt.Errorf("name and a value source are required")
+	}
+	if in.Policies != nil {
+		in.Tier = types.ParameterTierAdvanced
+	}
+	switch in.Type {
+	case types.ParameterTypeString, types.ParameterTypeSecureString, types.ParameterTypeStringList:
+	default:
+		return fmt.Errorf("invalid default parameter type")
+	}
+	out, err := ps.Put(commandContext, in, region)
 	if err != nil {
 		return err
 	}
-	putParamRegion = ps.Region
+	if !ps.DryRun {
+		shell.Printf("Put %s version %d\n", aws.ToString(in.Name), out.Version)
+	}
 	return nil
 }
-
-func multiLinePut() bool {
-	// Set the prompt explicitly rather than use SetMultiPrompt
-	// due to the unexpected 2nd line behavior
-	shell.SetPrompt("... ")
-	defer setPrompt(ps.Cwd)
-
-	shell.Println("Input options. End with a blank line.")
-	str := shell.ReadMultiLinesFunc(putOptions)
-	if str == "" {
-		shell.Println("multiline input ended in empty string")
-		return false
-	}
-	return true
-}
-
-func inlinePut(options []string) bool {
-	for _, p := range options {
-		if !putOptions(p) {
-			return false
+func parseTier(value string) (types.ParameterTier, error) {
+	for _, tier := range []types.ParameterTier{types.ParameterTierStandard, types.ParameterTierAdvanced, types.ParameterTierIntelligentTiering} {
+		if strings.EqualFold(value, string(tier)) {
+			return tier, nil
 		}
 	}
-	return true
+	return "", fmt.Errorf("tier must be Standard, Advanced or Intelligent-Tiering")
 }
-
-func putOptions(s string) bool {
-	if s == "" {
-		return false
+func policyJSON(value string) (string, error) {
+	if !strings.HasPrefix(value, "[") || !strings.HasSuffix(value, "]") {
+		return "", fmt.Errorf("policies must be [name,...]")
 	}
-	paramOption := strings.Split(s, "=")
-	if len(paramOption) < 2 {
-		shell.Println("invalid input")
-		shell.Println(putUsage)
-		return false
-	}
-	field := strings.ToLower(paramOption[0])
-	val := strings.Join(paramOption[1:], "=") // Handles the case where a value has an "=" character
-	err := validate(field, val)
-	if err != nil {
-		shell.Println(err)
-		return false
-	}
-	return true
-}
-
-func validate(f, v string) (err error) {
-	m := map[string]func(string) error{
-		"type":        validateType,
-		"name":        validateName,
-		"value":       validateValue,
-		"description": validateDescription,
-		"key":         validateKey,
-		"pattern":     validatePattern,
-		"overwrite":   validateOverwrite,
-		"region":      validateRegion,
-		"tier":        validateTier,
-		"policies":    validatePolicies,
-	}
-	if validator, ok := m[strings.ToLower(f)]; ok {
-		err = validator(v)
-		if err != nil {
-			// A validator failed so we need to reset the parameter input to an empty state
-			putParamInput = ssm.PutParameterInput{}
-			shell.Println(putUsage)
-			return err
+	result := []Policies{}
+	for _, name := range trim(strings.Split(value[1:len(value)-1], ",")) {
+		p, ok := policies[name]
+		if !ok {
+			return "", fmt.Errorf("unknown policy %q", name)
+		}
+		if p.expiration != (Expiration{}) {
+			result = append(result, p.expiration)
+		}
+		for _, v := range p.expirationNotification {
+			result = append(result, v)
+		}
+		for _, v := range p.noChangeNotification {
+			result = append(result, v)
 		}
 	}
-	return nil
-}
-
-func validateType(s string) (err error) {
-	validTypes := []string{"String", "StringList", "SecureString"}
-	for i := 0; i < len(validTypes); i++ {
-		if strings.EqualFold(s, validTypes[i]) { // Case insensitive validation of type field
-			putParamInput.Type = aws.String(validTypes[i])
-			return nil
-		}
-	}
-	return fmt.Errorf("Invalid type %s", s)
-}
-
-func validateValue(s string) (err error) {
-	s = trimSpaces(s)
-	putParamInput.Value = aws.String(s)
-	return nil
-}
-
-// trimSpaces works around an issue in ishell where a space is added to the end of each line in a multiline value
-// https://github.com/abiosoft/ishell/issues/132
-func trimSpaces(s string) string {
-	parts := strings.Split(s, "\n")
-	for i := 0; i < len(parts)-1; i++ {
-		size := len(parts[i])
-		parts[i] = parts[i][:size-1]
-	}
-	return strings.Join(parts, "\n")
-}
-
-func validateName(s string) (err error) {
-	if strings.HasPrefix(s, parameterstore.Delimiter) {
-		putParamInput.SetName(s)
-	} else {
-		putParamInput.SetName(ps.Cwd + parameterstore.Delimiter + s)
-	}
-	return nil
-}
-
-func validateDescription(s string) (err error) {
-	putParamInput.SetDescription(s)
-	return nil
-}
-
-// TODO validate key
-func validateKey(s string) (err error) {
-	putParamInput.SetKeyId(s)
-	return nil
-}
-
-// TODO validate pattern
-func validatePattern(s string) (err error) {
-	putParamInput.SetAllowedPattern(s)
-	return nil
-}
-
-func validateOverwrite(s string) (err error) {
-	overwrite, err := strconv.ParseBool(s)
-	if err != nil {
-		shell.Println("overwrite must be true or false")
-		return err
-	}
-	putParamInput.SetOverwrite(overwrite)
-	return nil
-}
-
-func validateRegion(s string) (err error) {
-	putParamRegion = s
-	return nil
-}
-
-const (
-	StandardTier = "Standard"
-	AdvancedTier = "Advanced"
-)
-
-func validateTier(s string) (err error) {
-	if strings.ToLower(s) == StandardTier || strings.ToLower(s) == AdvancedTier {
-		putParamInput.Tier = aws.String(strings.Title(s))
-		return nil
-	}
-	return errors.New("tier must be standard or advanced")
-}
-
-func validatePolicies(s string) (err error) {
-	var policySet []Policies
-	re := regexp.MustCompile(`^\[([\w\s,]+)\]`)
-	p := re.FindStringSubmatch(s)
-	if len(p) != 2 {
-		return fmt.Errorf("unable to validate policies %s", s)
-	}
-	namedPolicies := trim(strings.Split(p[1], ","))
-	for _, p := range namedPolicies {
-		policy, present := policies[p]
-		if !present {
-			return fmt.Errorf("policy %q does not exist. add it with the policy command", p)
-		}
-		if policy.expiration != (Expiration{}) {
-			policySet = append(policySet, policy.expiration)
-		}
-		for i := range policy.expirationNotification {
-			policySet = append(policySet, policy.expirationNotification[i])
-		}
-		for i := range policy.noChangeNotification {
-			policySet = append(policySet, policy.noChangeNotification[i])
-		}
-	}
-	policyBytes, err := json.Marshal(policySet)
-	if err != nil {
-		return err
-	}
-	putParamInput.Policies = aws.String(string(policyBytes))
-	putParamInput.Tier = aws.String(AdvancedTier)
-	return nil
+	b, err := json.Marshal(result)
+	return string(b), err
 }

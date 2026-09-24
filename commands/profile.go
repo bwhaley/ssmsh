@@ -1,19 +1,22 @@
 package commands
 
-import "github.com/abiosoft/ishell"
+import (
+	"fmt"
+)
 
-const profileUsage string = `
-profile name
-Switch to the specified profile as listed in the .aws config or credentials file.
-`
+const profileUsage = "profile [name]"
 
-func profile(c *ishell.Context) {
+func profile(c *Context) error {
 	if len(c.Args) == 0 {
-		if ps.Profile != "" {
-			shell.Println(ps.Profile)
+		p := ps.Profile
+		if p == "" {
+			p = "default"
 		}
-	} else if len(c.Args) == 1 {
-		ps.Profile = c.Args[0]
-		ps.InitClient(ps.Region)
+		shell.Println(p)
+		return nil
 	}
+	if len(c.Args) != 1 {
+		return fmt.Errorf("usage: %s", profileUsage)
+	}
+	return ps.Switch(commandContext, ps.Region, c.Args[0])
 }

@@ -3,45 +3,29 @@ package commands
 import (
 	"fmt"
 
-	"github.com/abiosoft/ishell"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/kms"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/kms"
 	saws "github.com/bwhaley/ssmsh/aws"
 )
 
-const keyUsage string = `
-key ARN|ID
-Set the KMS key ARN (or ID) to use with SecureString parameters
-`
+const keyUsage = "key [ARN|ID|alias/name]"
 
-func key(c *ishell.Context) {
-	if len(c.Args) != 1 {
-		shell.Println(keyUsage)
-		return
+func key(c *Context) error {
+	if len(c.Args) == 0 {
+		shell.Println(ps.Key)
+		return nil
 	}
-	if err := checkKey(c.Args[0]); err != nil {
-		shell.Println(err)
+	if len(c.Args) != 1 {
+		return fmt.Errorf("usage: %s", keyUsage)
+	}
+	cfg, err := saws.Load(commandContext, ps.Region, ps.Profile)
+	if err != nil {
+		return err
+	}
+	_, err = kms.NewFromConfig(cfg).DescribeKey(commandContext, &kms.DescribeKeyInput{KeyId: aws.String(c.Args[0])})
+	if err != nil {
+		return err
 	}
 	ps.Key = c.Args[0]
-}
-
-func checkKey(key string) (err error) {
-	client := kms.New(saws.NewSession(ps.Region, ps.Profile))
-	input := kms.ListKeysInput{}
-	for {
-		resp, err := client.ListKeys(&input)
-		if err != nil {
-			return err
-		}
-		for _, keyEntry := range resp.Keys {
-			if aws.StringValue(keyEntry.KeyId) == key || aws.StringValue(keyEntry.KeyArn) == key {
-				return nil
-			}
-		}
-		if resp.NextMarker == nil {
-			break
-		}
-		input.Marker = resp.NextMarker
-	}
-	return fmt.Errorf("key %s not found in this region", key)
+	return nil
 }

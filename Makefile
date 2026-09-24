@@ -1,66 +1,32 @@
-SHELL := /bin/bash
-PROJECT := github.com/bwhaley/ssmsh
-PKGS := $(shell go list ./... | grep -v /vendor)
-EXECUTABLE := ssmsh
-PKG := ssmsh
-GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null)
+GO ?= go
+GOFMT ?= gofmt
+GOTOOLCHAIN_VERSION := go1.27.1
+VERSION ?= dev
+GORELEASER_VERSION := v2.18.2
+GOVULNCHECK_VERSION := v1.1.4
+GOLANGCI_LINT_VERSION := v2.14.0
+LDFLAGS := -s -w -X main.Version=$(VERSION)
 
-.PHONY: build test golint docs $(PROJECT) $(PKGS) vendor
-
-VERSION := $(shell echo ${SSMSH_VERSION})
-ifeq "$(VERSION)" ""
-    VERSION="auto-build"
-endif
-
-GOVERSION := $(shell go version | grep 1.17)
-ifeq "$(GOVERSION)" ""
-    $(error must be running Go version 1.17.x)
-endif
-
-ifndef $(GOPATH)
-   GOPATH=$(shell go env GOPATH)
-   export GOPATH
-endif
-
-all: test build
-
-FGT := $(GOPATH)/bin/fgt
-$(FGT):
-	go get github.com/GeertJohan/fgt
-
-GOLINT := $(GOPATH)/bin/golint
-$(GOLINT):
-	go get golang.org/x/lint
-
-DEP := $(GOPATH)/bin/dep
-$(DEP):
-	go get -u github.com/golang/dep
-
-GO_LDFLAGS := -X $(shell go list ./$(PACKAGE)).GitCommit=$(GIT_COMMIT) -X main.Version=${VERSION}
-
-test: $(PKGS)
-
-$(PKGS): $(GOLINT)
-	@echo "FORMATTING"
-	go fmt $@
-	@echo "LINTING"
-	golint $@
-	@echo "Vetting"
-	go vet -v $@
-	@echo "TESTING"
-	go test -v $@
-
-vendor: $(DEP)
-	$(DEP) ensure
-
+.PHONY: all build install test vet lint fmt-check check vuln release-check snapshot clean
+all: check build
 build:
-	go build -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE) $(PROJECT)
-build-linux:
-	GOOS=linux GOARCH=amd64 go build -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE)-linux-amd64
-build-darwin-amd64:
-	GOOS=darwin GOARCH=amd64 go build -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE)-darwin-amd64
-build-darwin-arm64:
-	GOOS=darwin GOARCH=arm64 go build -ldflags "$(GO_LDFLAGS)" -o $(GOPATH)/bin/$(EXECUTABLE)-darwin-arm64
-
+	$(GO) build -trimpath -ldflags '$(LDFLAGS)' -o bin/ssmsh .
+install:
+	$(GO) install -trimpath -ldflags '$(LDFLAGS)' .
+test:
+	$(GO) test -race ./...
+vet:
+	$(GO) vet ./...
+lint:
+	GOTOOLCHAIN=$(GOTOOLCHAIN_VERSION) $(GO) run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
+fmt-check:
+	@test -z "$$($(GOFMT) -l .)" || ($(GOFMT) -l .; echo 'Run gofmt on the files above'; exit 1)
+check: fmt-check vet test
+vuln:
+	GOTOOLCHAIN=$(GOTOOLCHAIN_VERSION) $(GO) run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
+release-check:
+	GOTOOLCHAIN=$(GOTOOLCHAIN_VERSION) $(GO) run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION) check
+snapshot:
+	GOTOOLCHAIN=$(GOTOOLCHAIN_VERSION) $(GO) run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION) release --snapshot --clean
 clean:
-	rm -f $(GOPATH)/bin/$(EXECUTABLE) $(GOPATH)/bin/$(EXECUTABLE)-*
+	rm -rf bin dist

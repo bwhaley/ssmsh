@@ -1,67 +1,34 @@
 package commands
 
-import (
-	"os"
-	"os/signal"
-	"sort"
-	"syscall"
+const lsUsage = "ls [-rR] [region:]path ..."
 
-	"github.com/abiosoft/ishell"
-	"github.com/bwhaley/ssmsh/parameterstore"
-)
-
-const lsUsage string = `
-ls -[r|R] path ...
-Print the parameters in one or more paths.
--[r|R] List parameters recursively
-`
-
-func ls(c *ishell.Context) {
-	var err error
-	var pathList []string
-	paths, recurse := checkRecursion(c.Args)
-	// If no paths were provided, list the current directory
+func ls(c *Context) error {
+	paths, recursive := checkRecursion(c.Args)
 	if len(paths) == 0 {
-		paths = append(paths, ps.Cwd)
+		paths = []string{ps.Cwd}
 	}
-	for _, p := range paths {
-		pathList, err = list(p, recurse)
+	all := []string{}
+	for _, name := range paths {
+		p, err := parsePath(name)
 		if err != nil {
-			shell.Println("Error: ", err)
-			return
+			return err
 		}
-		if len(paths) > 1 && len(pathList) != 0 {
-			shell.Println(p + ":")
+		names, err := ps.List(commandContext, p, recursive)
+		if err != nil {
+			return err
 		}
-		sort.Strings(pathList)
-		for _, r := range pathList {
-			shell.Printf("%+s\n", r)
+		if len(paths) > 1 && cfg.Default.Output != "json" {
+			shell.Println(name + ":")
 		}
+		if cfg.Default.Output != "json" {
+			for _, v := range names {
+				shell.Println(v)
+			}
+		}
+		all = append(all, names...)
 	}
-}
-
-func list(path string, recurse bool) ([]string, error) {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT)
-
-	quit := make(chan bool)
-	lr := make(chan parameterstore.ListResult)
-	go func() {
-		parameterPath := parsePath(path)
-		ps.List(parameterPath, recurse, lr, quit)
-	}()
-
-	select {
-	case result := <-lr:
-		if result.Error != nil {
-			return nil, result.Error
-		}
-		return result.Result, nil
-	case <-sigs:
-		quit <- true
-		signal.Stop(sigs)
-		close(sigs)
-		close(lr)
-		return nil, nil
+	if cfg.Default.Output == "json" {
+		return printJSON(all)
 	}
+	return nil
 }

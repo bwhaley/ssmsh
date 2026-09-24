@@ -1,30 +1,21 @@
 package commands
 
 import (
-	"github.com/abiosoft/ishell"
+	"fmt"
 )
 
-const cdUsage string = `
-usage: cd path
-Change your working directory within the parameter store.
-Example:
-/>cd /foo
-/foo>
-`
+const cdUsage = "cd [region:]path"
 
-func cd(c *ishell.Context) {
-	var err error
+func cd(c *Context) error {
 	if len(c.Args) == 0 {
-		// noop
-	} else if len(c.Args) == 1 {
-		path := c.Args[0]
-		err = ps.SetCwd(parsePath(path))
-		if err != nil {
-			shell.Println("Error:", err)
-		} else {
-			setPrompt(ps.Cwd)
-		}
-	} else {
-		shell.Println("Incorrect number of arguments to cd command")
+		return nil
 	}
+	if len(c.Args) != 1 {
+		return fmt.Errorf("usage: %s", cdUsage)
+	}
+	p, err := parsePath(c.Args[0])
+	if err != nil {
+		return err
+	}
+	return ps.SetCwd(commandContext, p)
 }

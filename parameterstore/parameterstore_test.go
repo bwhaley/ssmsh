@@ -1,633 +1,301 @@
-package parameterstore_test
+package parameterstore
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-	"github.com/bwhaley/ssmsh/parameterstore"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
 )
 
-var EddardStark = &ssm.Parameter{
-	Name:  aws.String("/House/Stark/EddardStark"),
-	Type:  aws.String("String"),
-	Value: aws.String("Lord"),
+type fakeSSM struct {
+	API
+	params        map[string]types.Parameter
+	pages         []*ssm.GetParametersByPathOutput
+	pageCalls     int
+	history       []types.ParameterHistory
+	tags          []types.Tag
+	puts          []*ssm.PutParameterInput
+	deletes       [][]string
+	tagWrites     []types.Tag
+	getBatchSizes []int
+	failure       error
+	failPutAt     int
+	failTags      bool
+	failDelete    bool
 }
 
-var CatelynStark = &ssm.Parameter{
-	Name:  aws.String("/House/Stark/CatelynStark"),
-	Type:  aws.String("String"),
-	Value: aws.String("Lady"),
-}
-
-var RobStark = &ssm.Parameter{
-	Name:  aws.String("/House/Stark/RobStark"),
-	Type:  aws.String("String"),
-	Value: aws.String("Noble"),
-}
-
-var JonSnow = &ssm.Parameter{
-	Name:  aws.String("/House/Stark/JonSnow"),
-	Type:  aws.String("String"),
-	Value: aws.String("Bastard"),
-}
-
-var DaenerysTargaryen = &ssm.Parameter{
-	Name:  aws.String("/House/Targaryen/DaenerysTargaryen"),
-	Type:  aws.String("String"),
-	Value: aws.String("Noble"),
-}
-
-var HouseStark = []*ssm.Parameter{
-	EddardStark,
-	CatelynStark,
-	RobStark,
-}
-
-var HouseTargaryen = []*ssm.Parameter{
-	DaenerysTargaryen,
-}
-
-const NextToken = "A1B2C3D4"
-
-type mockedSSM struct {
-	ssmiface.SSMAPI
-	GetParametersByPathResp ssm.GetParametersByPathOutput
-	GetParametersByPathNext ssm.GetParametersByPathOutput
-	GetParameterHistoryResp ssm.GetParameterHistoryOutput
-	GetParametersResp       ssm.GetParametersOutput
-	GetParameterResp        []ssm.GetParameterOutput
-	DeleteParametersResp    ssm.DeleteParametersOutput
-	PutParameterResp        ssm.PutParameterOutput
-}
-
-func (m mockedSSM) GetParametersByPath(in *ssm.GetParametersByPathInput) (*ssm.GetParametersByPathOutput, error) {
-	if aws.StringValue(in.NextToken) != "" {
-		return &m.GetParametersByPathNext, nil
+func (f *fakeSSM) GetParameter(ctx context.Context, in *ssm.GetParameterInput, _ ...func(*ssm.Options)) (*ssm.GetParameterOutput, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
-	return &m.GetParametersByPathResp, nil
-}
-
-func (m mockedSSM) DeleteParameters(in *ssm.DeleteParametersInput) (*ssm.DeleteParametersOutput, error) {
-	return &m.DeleteParametersResp, nil
-}
-
-func (m mockedSSM) GetParameter(in *ssm.GetParameterInput) (*ssm.GetParameterOutput, error) {
-	parameterName := aws.StringValue(in.Name)
-	for _, param := range m.GetParameterResp {
-		if aws.StringValue(param.Parameter.Name) == parameterName {
-			return &param, nil
-		}
+	if f.failure != nil {
+		return nil, f.failure
 	}
-	return nil, errors.New("Parameter not found")
+	p, ok := f.params[aws.ToString(in.Name)]
+	if !ok {
+		return nil, &types.ParameterNotFound{}
+	}
+	return &ssm.GetParameterOutput{Parameter: &p}, nil
 }
-
-func (m mockedSSM) GetParameterHistory(in *ssm.GetParameterHistoryInput) (*ssm.GetParameterHistoryOutput, error) {
-	return &m.GetParameterHistoryResp, nil
-}
-
-func (m mockedSSM) GetParameters(in *ssm.GetParametersInput) (*ssm.GetParametersOutput, error) {
+func (f *fakeSSM) GetParameters(ctx context.Context, in *ssm.GetParametersInput, _ ...func(*ssm.Options)) (*ssm.GetParametersOutput, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if f.failure != nil {
+		return nil, f.failure
+	}
+	f.getBatchSizes = append(f.getBatchSizes, len(in.Names))
+	out := &ssm.GetParametersOutput{}
 	for _, n := range in.Names {
-		input := &ssm.GetParameterInput{
-			Name:           n,
-			WithDecryption: aws.Bool(true),
-		}
-		parameter, err := m.GetParameter(input)
-		if err != nil {
-			m.GetParametersResp.InvalidParameters = append(m.GetParametersResp.InvalidParameters, n)
+		if p, ok := f.params[n]; ok {
+			out.Parameters = append(out.Parameters, p)
 		} else {
-			m.GetParametersResp.Parameters = append(m.GetParametersResp.Parameters, parameter.Parameter)
+			out.InvalidParameters = append(out.InvalidParameters, n)
 		}
 	}
-	return &m.GetParametersResp, nil
+	return out, nil
 }
-
-func (m mockedSSM) PutParameter(in *ssm.PutParameterInput) (*ssm.PutParameterOutput, error) {
-	return &m.PutParameterResp, nil
+func (f *fakeSSM) GetParametersByPath(ctx context.Context, in *ssm.GetParametersByPathInput, _ ...func(*ssm.Options)) (*ssm.GetParametersByPathOutput, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if f.failure != nil {
+		return nil, f.failure
+	}
+	if len(f.pages) > 0 {
+		index := 0
+		if in.NextToken != nil {
+			index = 1
+		}
+		f.pageCalls++
+		return f.pages[index], nil
+	}
+	out := &ssm.GetParametersByPathOutput{}
+	for n, p := range f.params {
+		if strings.HasPrefix(n, strings.TrimSuffix(aws.ToString(in.Path), "/")+"/") {
+			out.Parameters = append(out.Parameters, p)
+		}
+	}
+	return out, nil
 }
+func (f *fakeSSM) GetParameterHistory(_ context.Context, in *ssm.GetParameterHistoryInput, _ ...func(*ssm.Options)) (*ssm.GetParameterHistoryOutput, error) {
+	if f.history != nil {
+		return &ssm.GetParameterHistoryOutput{Parameters: f.history}, nil
+	}
+	p := f.params[aws.ToString(in.Name)]
+	return &ssm.GetParameterHistoryOutput{Parameters: []types.ParameterHistory{{Name: p.Name, Value: p.Value, Version: p.Version, Type: p.Type}}}, nil
+}
+func (f *fakeSSM) PutParameter(_ context.Context, in *ssm.PutParameterInput, _ ...func(*ssm.Options)) (*ssm.PutParameterOutput, error) {
+	f.puts = append(f.puts, in)
+	if len(f.puts) == f.failPutAt {
+		return nil, errors.New("write failed")
+	}
+	f.params[aws.ToString(in.Name)] = types.Parameter{Name: in.Name, Value: in.Value, Type: in.Type, Version: 1}
+	return &ssm.PutParameterOutput{Version: 1}, nil
+}
+func (f *fakeSSM) DeleteParameters(_ context.Context, in *ssm.DeleteParametersInput, _ ...func(*ssm.Options)) (*ssm.DeleteParametersOutput, error) {
+	f.deletes = append(f.deletes, in.Names)
+	if f.failDelete {
+		return nil, errors.New("delete failed")
+	}
+	for _, n := range in.Names {
+		delete(f.params, n)
+	}
+	return &ssm.DeleteParametersOutput{DeletedParameters: in.Names}, nil
+}
+func (f *fakeSSM) ListTagsForResource(context.Context, *ssm.ListTagsForResourceInput, ...func(*ssm.Options)) (*ssm.ListTagsForResourceOutput, error) {
+	return &ssm.ListTagsForResourceOutput{TagList: f.tags}, nil
+}
+func (f *fakeSSM) AddTagsToResource(_ context.Context, in *ssm.AddTagsToResourceInput, _ ...func(*ssm.Options)) (*ssm.AddTagsToResourceOutput, error) {
+	if f.failTags {
+		return nil, errors.New("tags denied")
+	}
+	f.tagWrites = append(f.tagWrites, in.Tags...)
+	return &ssm.AddTagsToResourceOutput{}, nil
+}
+func fixture(names ...string) (*ParameterStore, *fakeSSM) {
+	f := &fakeSSM{params: map[string]types.Parameter{}}
+	for _, n := range names {
+		f.params[n] = types.Parameter{Name: aws.String(n), Value: aws.String("value"), Type: types.ParameterTypeString, Version: 1}
+	}
+	return &ParameterStore{Cwd: "/", Region: "r", Clients: map[string]API{"r": f}}, f
+}
+func pp(name string) ParameterPath { return ParameterPath{Name: name, Region: "r"} }
 
-func TestPut(t *testing.T) {
-	var expectedVersion int64 = 1
-	var p parameterstore.ParameterStore
-	err := p.NewParameterStore(false)
-	if err != nil {
+func TestListPaginationAndErrors(t *testing.T) {
+	p, f := fixture()
+	f.pages = []*ssm.GetParametersByPathOutput{{NextToken: aws.String("next")}, {Parameters: []types.Parameter{{Name: aws.String("/a/b/c")}, {Name: aws.String("/a/b/d")}}}}
+	got, err := p.List(context.Background(), pp("/a"), false)
+	if err != nil || !reflect.DeepEqual(got, []string{"b/"}) || f.pageCalls != 2 {
+		t.Fatalf("%v %v calls=%d", got, err, f.pageCalls)
+	}
+	f.failure = errors.New("access denied")
+	if _, err := p.List(context.Background(), pp("/a"), true); !errors.Is(err, f.failure) {
+		t.Fatalf("lost API error: %v", err)
+	}
+}
+func TestCancellation(t *testing.T) {
+	p, _ := fixture()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := p.List(ctx, pp("/"), true); !errors.Is(err, context.Canceled) {
+		t.Fatalf("%v", err)
+	}
+}
+func TestGetBatchingAndMissing(t *testing.T) {
+	var names []string
+	for i := 0; i < 23; i++ {
+		names = append(names, fmt.Sprintf("/p%02d", i))
+	}
+	p, f := fixture(names...)
+	got, err := p.Get(context.Background(), names, "r")
+	if err != nil || len(got) != 23 || !reflect.DeepEqual(f.getBatchSizes, []int{10, 10, 3}) {
+		t.Fatalf("%d %v %v", len(got), err, f.getBatchSizes)
+	}
+	if _, err := p.Get(context.Background(), []string{"/missing"}, "r"); err == nil {
+		t.Fatal("missing parameter succeeded")
+	}
+}
+func TestPaths(t *testing.T) {
+	p, f := fixture("/a/b/c")
+	p.Cwd = "/a/b"
+	if got := p.Resolve("../d"); got != "/a/d" {
+		t.Fatal(got)
+	}
+	if err := p.SetCwd(context.Background(), pp("/a")); err != nil || p.Cwd != "/a" {
+		t.Fatalf("%s %v", p.Cwd, err)
+	}
+	f.failure = errors.New("permission denied")
+	if err := p.SetCwd(context.Background(), pp("/x")); !errors.Is(err, f.failure) {
+		t.Fatalf("%v", err)
+	}
+}
+func TestCopyLatestMetadata(t *testing.T) {
+	p, f := fixture("/source")
+	f.history = []types.ParameterHistory{{Name: aws.String("/source"), Version: 9, Value: aws.String("latest"), Type: types.ParameterTypeSecureString, KeyId: aws.String("old-key"), Tier: types.ParameterTierAdvanced, DataType: aws.String("text"), Description: aws.String("description"), Policies: []types.ParameterInlinePolicy{{PolicyText: aws.String(`{"Type":"Expiration","Version":"1.0","Attributes":{"Timestamp":"2030-01-01T00:00:00Z"}}`)}}}, {Version: 1, Value: aws.String("old")}}
+	f.tags = []types.Tag{{Key: aws.String("owner"), Value: aws.String("test")}}
+	p.Key = "new-key"
+	if err := p.Copy(context.Background(), pp("/source"), pp("/dest"), false); err != nil {
 		t.Fatal(err)
 	}
-	p.Cwd = parameterstore.Delimiter
-	p.Clients[p.Region] = mockedSSM{
-		PutParameterResp: ssm.PutParameterOutput{
-			Version: aws.Int64(expectedVersion),
-		},
-	}
-	putParameterInput := ssm.PutParameterInput{
-		Name:        aws.String("/House/Stark/EddardStark"),
-		Value:       aws.String("Lord"),
-		Description: aws.String("Lord of Winterfell in Season 1"),
-		Type:        aws.String("String"),
-	}
-	resp, err := p.Put(&putParameterInput, p.Region)
-	if err != nil {
-		t.Fatal("Error putting parameter", err)
-	} else {
-		if aws.Int64Value(resp.Version) != expectedVersion {
-			msg := fmt.Errorf("expected %d, got %d", expectedVersion, aws.Int64Value(resp.Version))
-			t.Fatal(msg)
-		}
+	in := f.puts[0]
+	if aws.ToString(in.Value) != "latest" || aws.ToString(in.KeyId) != "new-key" || in.Tier != types.ParameterTierAdvanced || aws.ToString(in.DataType) != "text" || !strings.Contains(aws.ToString(in.Policies), "Expiration") || len(f.tagWrites) != 1 {
+		t.Fatalf("metadata not preserved: %+v", in)
 	}
 }
-
-func TestMoveParameter(t *testing.T) {
-	srcParam := parameterstore.ParameterPath{
-		Name:   "/House/Stark/SansaStark",
-		Region: "region",
-	}
-	dstParam := parameterstore.ParameterPath{
-		Name:   "/House/Lannister/SansaStark",
-		Region: "region",
-	}
-	var p parameterstore.ParameterStore
-	p.Region = "region"
-	err := p.NewParameterStore(false)
-	if err != nil {
+func TestCopyTreeAndMove(t *testing.T) {
+	p, f := fixture("/src/a", "/src/sub/b")
+	if err := p.Move(context.Background(), pp("/src"), pp("/dst")); err != nil {
 		t.Fatal(err)
 	}
-	p.Cwd = parameterstore.Delimiter
-	p.Clients[p.Region] = mockedSSM{
-		GetParameterResp: []ssm.GetParameterOutput{
-			{
-				Parameter: &ssm.Parameter{
-					Name:  aws.String(srcParam.Name),
-					Type:  aws.String("String"),
-					Value: aws.String("Noble"),
-				},
-			},
-			{
-				Parameter: &ssm.Parameter{
-					Name:  aws.String(dstParam.Name),
-					Type:  aws.String("String"),
-					Value: aws.String("Noble"),
-				},
-			},
-		},
-		GetParameterHistoryResp: ssm.GetParameterHistoryOutput{
-			Parameters: []*ssm.ParameterHistory{
-				{
-					Name:        aws.String(srcParam.Name),
-					Value:       aws.String("Noble"),
-					Type:        aws.String("String"),
-					Description: aws.String("Eldest daughter of House Stark, bethrothed to Tyrion Lannister"),
-					Version:     aws.Int64(2),
-				},
-				{
-					Name:        aws.String(srcParam.Name),
-					Value:       aws.String("Noble"),
-					Type:        aws.String("String"),
-					Description: aws.String("Eldest daughter of House Stark"),
-					Version:     aws.Int64(1),
-				},
-			},
-		},
-	}
-	err = p.Move(srcParam, dstParam)
-	if err != nil {
-		t.Fatal("Error moving parameter", err)
-	}
-	p.Clients[p.Region] = mockedSSM{
-		GetParameterResp: []ssm.GetParameterOutput{
-			{
-				Parameter: &ssm.Parameter{
-					Name:  aws.String(dstParam.Name),
-					Type:  aws.String("String"),
-					Value: aws.String("Noble"),
-				},
-			},
-		},
-	}
-	resp, err := p.Get([]string{srcParam.Name}, p.Region)
-	if err != nil {
-		msg := fmt.Errorf("Error getting %s: %s", srcParam.Name, err)
-		t.Fatal(msg)
-	}
-	if len(resp) > 0 {
-		if err != nil {
-			msg := fmt.Errorf("Expected parameter %s to be removed but found %v", srcParam.Name, resp)
-			t.Fatal(msg)
+	for _, n := range []string{"/dst/a", "/dst/sub/b"} {
+		if _, ok := f.params[n]; !ok {
+			t.Fatalf("missing %s", n)
 		}
 	}
-	_, err = p.Get([]string{dstParam.Name}, p.Region)
-	if err != nil {
-		msg := fmt.Errorf("Expected to find %s but didn't", dstParam.Name)
-		t.Fatal(msg)
+	if _, ok := f.params["/src/a"]; ok {
+		t.Fatal("source retained")
 	}
 }
-
-func TestCopyPath(t *testing.T) {
-	srcPath := parameterstore.ParameterPath{
-		Name:   "/House/Stark",
-		Region: "region",
+func TestMoveNeverDeletesAfterCopyFailure(t *testing.T) {
+	for _, tags := range []bool{false, true} {
+		t.Run(fmt.Sprint(tags), func(t *testing.T) {
+			p, f := fixture("/src/a", "/src/b")
+			if tags {
+				f.failTags = true
+				f.tags = []types.Tag{{Key: aws.String("x"), Value: aws.String("y")}}
+			} else {
+				f.failPutAt = 2
+			}
+			err := p.Move(context.Background(), pp("/src"), pp("/dst"))
+			if err == nil || !strings.Contains(err.Error(), "sources retained") || len(f.deletes) != 0 {
+				t.Fatalf("unsafe move: %v %v", err, f.deletes)
+			}
+		})
 	}
-	dstPath := parameterstore.ParameterPath{
-		Name:   "/House/Targaryen",
-		Region: "region",
-	}
-
-	var p parameterstore.ParameterStore
-	p.Region = "region"
-	err := p.NewParameterStore(false)
-	if err != nil {
+}
+func TestMoveCleanupFailure(t *testing.T) {
+	p, f := fixture("/src")
+	f.failDelete = true
+	err := p.Move(context.Background(), pp("/src"), pp("/dst"))
+	if err == nil || !strings.Contains(err.Error(), "cleanup incomplete") {
 		t.Fatal(err)
 	}
-	p.Cwd = parameterstore.Delimiter
-	bothHouses := append(HouseStark, HouseTargaryen...)
-	p.Clients[p.Region] = mockedSSM{
-		GetParameterResp: []ssm.GetParameterOutput{
-			{Parameter: EddardStark},
-			{Parameter: CatelynStark},
-			{Parameter: RobStark},
-			{Parameter: JonSnow},
-			{Parameter: DaenerysTargaryen},
-		},
-		GetParametersByPathResp: ssm.GetParametersByPathOutput{
-			Parameters: bothHouses,
-			NextToken:  aws.String(NextToken),
-		},
-		GetParametersByPathNext: ssm.GetParametersByPathOutput{
-			Parameters: []*ssm.Parameter{JonSnow},
-			NextToken:  aws.String(""),
-		},
-		GetParameterHistoryResp: ssm.GetParameterHistoryOutput{
-			Parameters: []*ssm.ParameterHistory{
-				{
-					Name:    aws.String("/House/Stark/EddardStark"),
-					Version: aws.Int64(2),
-				},
-			},
-			NextToken: aws.String(""),
-		},
+}
+func TestCopyOverlap(t *testing.T) {
+	for _, dst := range []string{"/src", "/src/sub"} {
+		p, f := fixture("/src/a")
+		if err := p.Move(context.Background(), pp("/src"), pp(dst)); err == nil {
+			t.Fatal("overlap accepted")
+		}
+		if len(f.puts)+len(f.deletes) != 0 {
+			t.Fatal("overlap mutated data")
+		}
 	}
-	err = p.Copy(srcPath, dstPath, true)
-	if err != nil {
-		t.Fatal("Error copying parameter path: ", err)
+	p, f := fixture("/a/item")
+	if err := p.Move(context.Background(), pp("/a/item"), pp("/a")); err == nil {
+		t.Fatal("resolved self-move accepted")
 	}
-	expectedName := parameterstore.ParameterPath{
-		Name:   "/House/Targaryen/Stark/EddardStark",
-		Region: "region",
-	}
-	resp, err := p.GetHistory(expectedName)
-	if err != nil {
-		t.Fatal("Error getting history: ", err)
-	}
-	if len(resp) != 1 {
-		msg := fmt.Errorf("Expected history of length 1, got %s", resp)
-		t.Fatal(msg)
+	if len(f.deletes) != 0 {
+		t.Fatal("deleted source")
 	}
 }
-
-func TestCopyParameter(t *testing.T) {
-	srcParam := parameterstore.ParameterPath{
-		Name:   "/House/Stark/JonSnow",
-		Region: "region",
-	}
-	dstParam := parameterstore.ParameterPath{
-		Name:   "/House/Targaryen/JonSnow",
-		Region: "region",
-	}
-	var p parameterstore.ParameterStore
-	p.Region = "region"
-	err := p.NewParameterStore(false)
-	if err != nil {
+func TestDryRun(t *testing.T) {
+	p, f := fixture("/src/a", "/src/b")
+	p.DryRun = true
+	if err := p.Move(context.Background(), pp("/src"), pp("/dst")); err != nil {
 		t.Fatal(err)
 	}
-	p.Cwd = parameterstore.Delimiter
-	p.Clients[p.Region] = mockedSSM{
-		GetParameterResp: []ssm.GetParameterOutput{
-			{
-				Parameter: &ssm.Parameter{
-					Name:  aws.String("/House/Stark/JonSnow"),
-					Type:  aws.String("String"),
-					Value: aws.String("King"),
-				},
-			},
-			{
-				Parameter: &ssm.Parameter{
-					Name:  aws.String("/House/Targaryen/JonSnow"),
-					Type:  aws.String("String"),
-					Value: aws.String("King"),
-				},
-			},
-		},
-		GetParameterHistoryResp: ssm.GetParameterHistoryOutput{
-			Parameters: []*ssm.ParameterHistory{
-				{
-					Name:        aws.String("/House/Stark/JonSnow"),
-					Value:       aws.String("King"),
-					Type:        aws.String("String"),
-					Description: aws.String("King of the north"),
-					Version:     aws.Int64(2),
-				},
-				{
-					Name:        aws.String("/House/Stark/JonSnow"),
-					Value:       aws.String("Bastard"),
-					Type:        aws.String("String"),
-					Description: aws.String("Bastard of Winterfell"),
-					Version:     aws.Int64(1),
-				},
-			},
-		},
-	}
-	err = p.Copy(srcParam, dstParam, false)
-	if err != nil {
-		t.Fatal("Error copying parameter", err)
-	}
-	resp, err := p.Get([]string{dstParam.Name}, p.Region)
-	if err != nil {
-		t.Fatal("Error getting parameter", err)
-	}
-	expectedName := parameterstore.ParameterPath{
-		Name:   "/House/Targaryen/JonSnow",
-		Region: "region",
-	}
-	if aws.StringValue(resp[0].Name) != expectedName.Name {
-		msg := fmt.Errorf("expected %s, got %s", expectedName.Name, aws.StringValue(resp[0].Name))
-		t.Fatal(msg)
+	if len(f.puts)+len(f.deletes)+len(f.tagWrites) != 0 || len(p.Actions) != 4 {
+		t.Fatalf("dry run: writes=%v deletes=%v actions=%v", f.puts, f.deletes, p.Actions)
 	}
 }
-
-func TestCwd(t *testing.T) {
-	cases := []struct {
-		GetParametersByPathResp ssm.GetParametersByPathOutput
-		Path                    string
-		Expected                string
-	}{
-		{
-			Path:     "/",
-			Expected: "/",
-		},
-		{
-			Path: "/House/Stark/..///Deceased",
-			GetParametersByPathResp: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("/House/Stark/EddardStark"),
-						Type:  aws.String("String"),
-						Value: aws.String("Lord"),
-					},
-				},
-				NextToken: aws.String(""),
-			},
-			Expected: "/House/Deceased",
-		},
+func TestCrossRegionKey(t *testing.T) {
+	p, f := fixture("/src")
+	dst := &fakeSSM{params: map[string]types.Parameter{}}
+	p.Clients["other"] = dst
+	f.history = []types.ParameterHistory{{Version: 1, Type: types.ParameterTypeSecureString, Value: aws.String("secret"), KeyId: aws.String("source-key")}}
+	target := ParameterPath{Name: "/dst", Region: "other"}
+	if err := p.Copy(context.Background(), pp("/src"), target, false); err == nil {
+		t.Fatal("missing destination key accepted")
 	}
-
-	var p parameterstore.ParameterStore
-	for _, c := range cases {
-		err := p.NewParameterStore(false)
-		if err != nil {
-			t.Fatal("unexpected error", err)
-		}
-		p.Region = "region"
-		p.Cwd = parameterstore.Delimiter
-		p.Clients[p.Region] = mockedSSM{
-			GetParametersByPathResp: c.GetParametersByPathResp,
-		}
-		err = p.SetCwd(parameterstore.ParameterPath{Name: c.Path, Region: "region"})
-		if err != nil {
-			t.Fatal("unexpected error", err)
-		}
-		if p.Cwd != c.Expected {
-			msg := fmt.Errorf("expected %v, got %v", c.Expected, p.Cwd)
-			t.Fatal(msg)
-		}
+	p.Key = "destination-key"
+	if err := p.Copy(context.Background(), pp("/src"), target, false); err != nil {
+		t.Fatal(err)
 	}
-
-	err := p.NewParameterStore(false)
-	if err != nil {
-		t.Fatal("unexpected error", err)
-	}
-	p.Cwd = parameterstore.Delimiter
-	testDir := parameterstore.ParameterPath{
-		Name:   "/nodir",
-		Region: "region",
-	}
-	err = p.SetCwd(testDir)
-	if err == nil {
-		msg := fmt.Errorf("Expected error for dir %s, got cwd %s ", testDir, p.Cwd)
-		t.Fatal(msg)
+	if aws.ToString(dst.puts[0].KeyId) != "destination-key" {
+		t.Fatal("wrong key")
 	}
 }
-
-func TestDelete(t *testing.T) {
-	testParams := []parameterstore.ParameterPath{
-		{
-			Name:   "/House/Stark/EddardStark",
-			Region: "region",
-		},
-		{
-			Name:   "/House/Stark/CatelynStark",
-			Region: "region",
-		},
-		{
-			Name:   "/House/Stark/TyrionLannister",
-			Region: "region",
-		},
+func TestDeletePreflightAndBatching(t *testing.T) {
+	var names []string
+	for i := 0; i < 23; i++ {
+		names = append(names, fmt.Sprintf("/src/%d", i))
 	}
-	deleteParametersOutput := ssm.DeleteParametersOutput{
-		DeletedParameters: []*string{
-			aws.String("/House/Stark/EddardStark"),
-			aws.String("/House/Stark/CatelynStark"),
-		},
-		InvalidParameters: []*string{
-			aws.String("/House/Stark/TyrionLannister"),
-		},
+	p, f := fixture(names...)
+	if err := p.Remove(context.Background(), []ParameterPath{pp("/src"), pp("/missing")}, true); err == nil {
+		t.Fatal("missing target accepted")
 	}
-
-	var p parameterstore.ParameterStore
-	p.Region = "region"
-	err := p.NewParameterStore(false)
-	if err != nil {
-		t.Fatal("unexpected error", err)
+	if len(f.deletes) != 0 {
+		t.Fatal("deleted before preflight finished")
 	}
-	p.Clients[p.Region] = mockedSSM{
-		DeleteParametersResp: deleteParametersOutput,
+	if err := p.Remove(context.Background(), []ParameterPath{pp("/src")}, true); err != nil {
+		t.Fatal(err)
 	}
-	err = p.Remove(testParams, false)
-	if err == nil {
-		msg := fmt.Errorf("Expected error for param %s, got %v ", testParams[2], err)
-		t.Fatal(msg)
+	if len(f.deletes) != 3 || len(f.deletes[0]) != 10 || len(f.deletes[2]) != 3 {
+		t.Fatalf("%v", f.deletes)
 	}
 }
-
-func TestGetHistory(t *testing.T) {
-	testParam := parameterstore.ParameterPath{
-		Name:   "/House/Stark/EddardStark",
-		Region: "region",
+func TestPermissionErrorsPropagate(t *testing.T) {
+	p, f := fixture()
+	f.failure = errors.New("access denied")
+	if err := p.Remove(context.Background(), []ParameterPath{pp("/src")}, true); !errors.Is(err, f.failure) {
+		t.Fatalf("%v", err)
 	}
-	getHistoryOutput := ssm.GetParameterHistoryOutput{
-		Parameters: []*ssm.ParameterHistory{
-			{
-				Name:    aws.String("/House/Stark/EddardStark"),
-				Version: aws.Int64(2),
-			},
-			{
-				Name:    aws.String("/House/Stark/EddardStark"),
-				Version: aws.Int64(1),
-			},
-		},
-		NextToken: aws.String(""),
-	}
-	var p parameterstore.ParameterStore
-	p.Region = "region"
-	err := p.NewParameterStore(false)
-	if err != nil {
-		t.Fatal("unexpected error", err)
-	}
-	p.Clients[p.Region] = mockedSSM{
-		GetParameterHistoryResp: getHistoryOutput,
-	}
-	resp, err := p.GetHistory(testParam)
-	if err != nil {
-		msg := fmt.Errorf("Unexpected error %s", err)
-		t.Fatal(msg)
-	}
-	if len(resp) != 2 {
-		msg := fmt.Errorf("Expected history of length 2, got %s", resp)
-		t.Fatal(msg)
-	}
-}
-
-func TestList(t *testing.T) {
-	cases := []struct {
-		Query                   parameterstore.ParameterPath
-		GetParametersByPathResp ssm.GetParametersByPathOutput
-		GetParametersResp       ssm.GetParametersOutput
-		GetParametersByPathNext ssm.GetParametersByPathOutput
-		Expected                []string
-		Recurse                 bool
-	}{
-		{
-			Query: parameterstore.ParameterPath{
-				Name:   "/House/Stark/EddardStark",
-				Region: "region",
-			},
-			Recurse: false,
-			GetParametersByPathResp: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{},
-				NextToken:  aws.String(""),
-			},
-			Expected: []string{
-				"/House/Stark/EddardStark",
-			},
-			GetParametersResp: ssm.GetParametersOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("/House/Stark/EddardStark"),
-						Type:  aws.String("String"),
-						Value: aws.String("Lord"),
-					},
-				},
-			},
-		}, {
-			Query: parameterstore.ParameterPath{
-				Name:   "/",
-				Region: "region",
-			},
-			Recurse: false,
-			Expected: []string{
-				"root",
-			},
-			GetParametersResp: ssm.GetParametersOutput{
-				Parameters: []*ssm.Parameter{
-					{
-						Name:  aws.String("root"),
-						Type:  aws.String("String"),
-						Value: aws.String("A root parameter"),
-					},
-				},
-			},
-		},
-		{
-			Query: parameterstore.ParameterPath{
-				Name:   "/House/Stark",
-				Region: "region",
-			},
-			Recurse: false,
-			GetParametersByPathResp: ssm.GetParametersByPathOutput{
-				Parameters: HouseStark,
-				NextToken:  aws.String(""),
-			},
-			Expected: []string{
-				"EddardStark",
-				"CatelynStark",
-				"RobStark",
-			},
-		},
-		{
-			Query: parameterstore.ParameterPath{
-				Name:   "/House/",
-				Region: "region",
-			},
-			Recurse: true,
-			GetParametersByPathResp: ssm.GetParametersByPathOutput{
-				Parameters: HouseStark,
-				NextToken:  aws.String(NextToken),
-			},
-			GetParametersByPathNext: ssm.GetParametersByPathOutput{
-				Parameters: []*ssm.Parameter{JonSnow, DaenerysTargaryen},
-				NextToken:  aws.String(""),
-			},
-			Expected: []string{
-				"/House/Stark/EddardStark",
-				"/House/Stark/CatelynStark",
-				"/House/Stark/RobStark",
-				"/House/Stark/JonSnow",
-				"/House/Targaryen/DaenerysTargaryen",
-			},
-		},
-	}
-
-	for _, c := range cases {
-		var p parameterstore.ParameterStore
-		p.Region = "region"
-		err := p.NewParameterStore(false)
-		if err != nil {
-			t.Fatal("unexpected error", err)
-		}
-		p.Clients[p.Region] = mockedSSM{
-			GetParametersByPathResp: c.GetParametersByPathResp,
-			GetParametersByPathNext: c.GetParametersByPathNext,
-			GetParametersResp:       c.GetParametersResp,
-		}
-		p.Cwd = parameterstore.Delimiter
-
-		ch := make(chan parameterstore.ListResult)
-		quit := make(chan bool)
-		go func() {
-			p.List(c.Query, c.Recurse, ch, quit)
-		}()
-
-		result := <-ch
-		if result.Error != nil {
-			quit <- true
-			t.Fatal("unexpected error", result.Error)
-		}
-		if !equal(result.Result, c.Expected) {
-			msg := fmt.Errorf("expected %v, got %v", c.Expected, result.Result)
-			t.Fatal(msg)
-		}
-	}
-}
-
-func equal(first []string, second []string) bool {
-	if len(first) != len(second) {
-		return false
-	}
-	for i := 0; i < len(first); i++ {
-		if first[i] != second[i] {
-			return false
-		}
-	}
-	return true
 }

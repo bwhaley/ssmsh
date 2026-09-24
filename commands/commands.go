@@ -1,118 +1,203 @@
 package commands
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"sort"
 	"strings"
+	"time"
 
-	"github.com/abiosoft/ishell"
 	"github.com/bwhaley/ssmsh/config"
 	"github.com/bwhaley/ssmsh/parameterstore"
 )
 
-type fn func(*ishell.Context)
+type Context struct {
+	Args []string
+}
+
+type command struct {
+	help    string
+	usage   string
+	handler func(*Context) error
+}
+
+type console struct {
+	out      io.Writer
+	readLine func() (string, error)
+	err      error
+}
+
+func (c *console) Print(values ...any) {
+	if c.err == nil {
+		_, c.err = fmt.Fprint(c.out, values...)
+	}
+}
+
+func (c *console) Println(values ...any) {
+	if c.err == nil {
+		_, c.err = fmt.Fprintln(c.out, values...)
+	}
+}
+
+func (c *console) Printf(format string, values ...any) {
+	if c.err == nil {
+		_, c.err = fmt.Fprintf(c.out, format, values...)
+	}
+}
 
 var (
-	shell *ishell.Shell
-	ps    *parameterstore.ParameterStore
-	cfg   *config.Config
+	ErrExit = errors.New("exit requested")
+
+	shell          *console
+	ps             *parameterstore.ParameterStore
+	cfg            *config.Config
+	commandContext context.Context
+	handlers       map[string]command
+	Timeout                  = 2 * time.Minute
+	SecretInput    io.Reader = os.Stdin
+	// BatchInput prevents value-stdin from consuming the command stream.
+	BatchInput  bool
+	Interactive bool
 )
 
-// Init initializes the ssmsh subcommands
-func Init(iShell *ishell.Shell, iPs *parameterstore.ParameterStore, iCfg *config.Config) {
-	shell = iShell
-	ps = iPs
-	cfg = iCfg
-	registerCommand("cd", "change your relative location within the parameter store", cd, cdUsage)
-	registerCommand("cp", "copy source to dest", cp, cpUsage)
-	registerCommand("decrypt", "toggle parameter decryption", decrypt, decryptUsage)
+func Init(out io.Writer, readLine func() (string, error), store *parameterstore.ParameterStore, configuration *config.Config) {
+	shell = &console{out: out, readLine: readLine}
+	ps, cfg = store, configuration
+	handlers = make(map[string]command)
+	policies = make(map[string]parameterPolicies)
+	registerCommand("cd", "change parameter directory", cd, cdUsage)
+	registerCommand("cp", "copy parameters", cp, cpUsage)
+	registerCommand("decrypt", "set parameter decryption", decrypt, decryptUsage)
+	registerCommand("exit", "exit the interactive shell", exit, "exit")
 	registerCommand("get", "get parameters", get, getUsage)
 	registerCommand("history", "get parameter history", history, historyUsage)
-	registerCommand("key", "set the KMS key", key, keyUsage)
+	registerCommand("key", "set the destination KMS key", key, keyUsage)
 	registerCommand("ls", "list parameters", ls, lsUsage)
 	registerCommand("mv", "move parameters", mv, mvUsage)
-	registerCommand("policy", "create named parameter policy", policy, policyUsage)
-	registerCommand("profile", "switch to a different AWS IAM profile", profile, profileUsage)
-	registerCommand("put", "set parameter", put, putUsage)
-	registerCommand("region", "change region", region, regionUsage)
+	registerCommand("policy", "create a named parameter policy", policy, policyUsage)
+	registerCommand("profile", "switch AWS profile", profile, profileUsage)
+	registerCommand("put", "set a parameter", put, putUsage)
+	registerCommand("region", "switch AWS region", region, regionUsage)
 	registerCommand("rm", "remove parameters", rm, rmUsage)
-	setPrompt(parameterstore.Delimiter)
 }
 
-// registerCommand adds a command to the shell
-func registerCommand(name string, helpText string, f fn, usageText string) {
-	shell.AddCmd(&ishell.Cmd{
-		Name:     name,
-		Help:     helpText,
-		LongHelp: usageText,
-		Func:     f,
-	})
+func exit(c *Context) error {
+	if len(c.Args) != 0 {
+		return fmt.Errorf("usage: exit")
+	}
+	return ErrExit
 }
 
-// setPrompt configures the shell prompt
-func setPrompt(prompt string) {
-	shell.SetPrompt(prompt + ">")
+func registerCommand(name, help string, handler func(*Context) error, usage string) {
+	handlers[name] = command{help: help, usage: usage, handler: handler}
 }
 
-// remove deletes an element from a slice of strings
-func remove(slice []string, i int) []string {
-	return append(slice[:i], slice[i+1:]...)
+// Execute is shared by the interactive shell, inline commands, and batch files.
+func Execute(ctx context.Context, args []string) error {
+	shell.err = nil
+	if len(args) == 0 {
+		return nil
+	}
+	if args[0] == "help" {
+		return printHelp(args[1:])
+	}
+	entry, ok := handlers[args[0]]
+	if !ok {
+		return fmt.Errorf("unknown command %q", args[0])
+	}
+	ctx, cancel := context.WithTimeout(ctx, Timeout)
+	defer cancel()
+	commandContext = ctx
+	ps.Actions = nil
+	if err := entry.handler(&Context{Args: args[1:]}); err != nil {
+		return err
+	}
+	if shell.err != nil {
+		return shell.err
+	}
+	if ps.DryRun && len(ps.Actions) > 0 {
+		return printJSON(ps.Actions)
+	}
+	return nil
 }
 
-// checkRecursion searches a slice of strings for an element matching -r or -R
-func checkRecursion(paths []string) ([]string, bool) {
-	for i, p := range paths {
-		if strings.EqualFold(p, "-r") {
-			paths = remove(paths, i)
-			return paths, true
+func printHelp(args []string) error {
+	if len(args) > 1 {
+		return fmt.Errorf("usage: help [command]")
+	}
+	if len(args) == 1 {
+		entry, ok := handlers[args[0]]
+		if !ok {
+			return fmt.Errorf("unknown command %q", args[0])
+		}
+		shell.Println(entry.usage)
+		return shell.err
+	}
+	names := make([]string, 0, len(handlers))
+	for name := range handlers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	shell.Println("Commands:")
+	for _, name := range names {
+		shell.Printf("%-12s %s\n", name, handlers[name].help)
+	}
+	return shell.err
+}
+
+func Prompt() string {
+	profile := ps.Profile
+	if profile == "" {
+		profile = "default"
+	}
+	return fmt.Sprintf("[%s@%s] %s> ", profile, ps.Region, ps.Cwd)
+}
+
+func checkRecursion(args []string) ([]string, bool) {
+	var paths []string
+	recursive := false
+	for _, arg := range args {
+		if strings.EqualFold(arg, "-r") {
+			recursive = true
+		} else {
+			paths = append(paths, arg)
 		}
 	}
-	return paths, false
+	return paths, recursive
 }
 
-// parsePath determines whether a path includes a region
-func parsePath(path string) (parameterPath parameterstore.ParameterPath) {
-	pathParts := strings.Split(path, ":")
-	switch len(pathParts) {
-	case 1:
-		parameterPath.Name = pathParts[0]
-		parameterPath.Region = ps.Region
-	case 2:
-		parameterPath.Region = pathParts[0]
-		parameterPath.Name = pathParts[1]
+func parsePath(value string) (parameterstore.ParameterPath, error) {
+	if value == "" {
+		return parameterstore.ParameterPath{}, fmt.Errorf("empty parameter path")
 	}
-	ps.InitClient(parameterPath.Region)
-	return parameterPath
-}
-
-func groupByRegion(params []parameterstore.ParameterPath) map[string][]string {
-	paramsByRegion := make(map[string][]string)
-	for _, p := range params {
-		paramsByRegion[p.Region] = append(paramsByRegion[p.Region], p.Name)
+	parts := strings.Split(value, ":")
+	if len(parts) > 2 || (len(parts) == 2 && (parts[0] == "" || parts[1] == "")) {
+		return parameterstore.ParameterPath{}, fmt.Errorf("invalid path %q; use [region:]path", value)
 	}
-	return paramsByRegion
-}
-
-func trim(with []string) (without []string) {
-	for i := range with {
-		without = append(without, strings.TrimSpace(with[i]))
+	p := parameterstore.ParameterPath{Name: parts[0], Region: ps.Region}
+	if len(parts) == 2 {
+		p.Region, p.Name = parts[0], parts[1]
 	}
-	return without
+	return p, nil
 }
 
-func printResult(result interface{}) {
-	switch cfg.Default.Output {
-	case "json":
-		printJSON(result)
-	default:
-		shell.Printf("%+v\n", result)
+func trim(values []string) []string {
+	result := make([]string, len(values))
+	for i, value := range values {
+		result[i] = strings.TrimSpace(value)
 	}
+	return result
 }
 
-func printJSON(result interface{}) {
-	resultJSON, err := json.MarshalIndent(result, "", "    ")
+func printJSON(value any) error {
+	data, err := json.MarshalIndent(value, "", "    ")
 	if err != nil {
-		shell.Println("Error with result: ", err)
-	} else {
-		shell.Println(string(resultJSON))
+		return err
 	}
+	shell.Println(string(data))
+	return shell.err
 }

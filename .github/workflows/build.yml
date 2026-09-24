@@ -1,36 +1,44 @@
 name: Build
-
 on:
   push:
-
-env:
-  AWS_DEFAULT_REGION: us-east-1
-
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  lint:
-    name: Lint
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test -race ./...
+      - run: go build ./...
+  checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v7.0.1
         with:
-          go-version: 1.17
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+          fetch-depth: 0
+      - uses: actions/setup-go@v7.0.0
         with:
-          version: v1.56.1
-          args: --enable golint
-  test-and-build:
-    name: Test and build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+          go-version-file: go.mod
+      - run: make fmt-check
+      - run: go mod tidy && git diff --exit-code -- go.mod go.sum
+      - run: make lint
+      - run: make vuln
+      - uses: goreleaser/goreleaser-action@v7.2.3
         with:
-          go-version: 1.17
-      - name: Vet
-        run: go vet -v $(go list ./...)
-      - name: Test
-        run: go test -v $(go list ./...)
-      - name: Build
-        run: make build
+          version: v2.18.2
+          args: check
+      - uses: goreleaser/goreleaser-action@v7.2.3
+        with:
+          version: v2.18.2
+          args: release --snapshot --clean
