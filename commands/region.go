@@ -1,26 +1,18 @@
 package commands
 
 import (
-	"github.com/abiosoft/ishell"
+	"fmt"
 )
 
-const regionUsage string = `
-usage: region region
-Update your region.
-Example:
-region us-west-2
-`
+const regionUsage = "region [name]"
 
-func region(c *ishell.Context) {
+func region(c *Context) error {
 	if len(c.Args) == 0 {
-		if ps.Region != "" {
-			shell.Println(ps.Region)
-		}
-	} else if len(c.Args) == 1 {
-		ps.Region = c.Args[0]
-		err := ps.NewParameterStore(true)
-		if err != nil {
-			shell.Printf("Error: %s", err)
-		}
+		shell.Println(ps.Region)
+		return nil
 	}
+	if len(c.Args) != 1 {
+		return fmt.Errorf("usage: %s", regionUsage)
+	}
+	return ps.Switch(commandContext, c.Args[0], ps.Profile)
 }

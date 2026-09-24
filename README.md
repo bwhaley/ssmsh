@@ -1,308 +1,208 @@
 # ssmsh
-ssmsh is an interactive shell for the EC2 Parameter Store. Features:
-* Interact with the parameter store hierarchy using familiar commands like cd, ls, cp, mv, and rm
-* Supports relative paths and shorthand (`..`) syntax
-* Operate on parameters between regions
-* Recursively list, copy, and remove parameters
-* Get parameter history
-* Create new parameters using put
-* Advanced parameters (with policies)
-* Supports emacs-style command shell navigation hotkeys
-* Submit batch commands with the `-file` flag
-* Inline commands
+
+`ssmsh` is an interactive shell and command-line client for AWS Systems Manager Parameter Store. It provides familiar commands such as `cd`, `ls`, `get`, `put`, `cp`, `mv`, and `rm`, including relative paths, recursion, multiple regions, parameter history, advanced parameter policies, and batch execution.
+
+The interactive prompt shows the active AWS profile, region, and Parameter Store path:
+
+```text
+[production@us-west-2] /service/api> ls
+database/
+endpoint
+```
 
 ## Installation
 
-### Binaries
+Download macOS, Linux, or Windows archives from [GitHub Releases](https://github.com/bwhaley/ssmsh/releases), or install the current source with Go 1.27.1:
 
-Download binaries for MacOS, Linux, or Windows from the latest release [here](https://github.com/bwhaley/ssmsh/releases).
+```bash
+go install github.com/bwhaley/ssmsh@latest
+```
 
-### Homebrew
-
-There is a Homebrew tap published to this repo, for installation on both MacOS and Linux. Add the tap and install with:
+The repository also acts as a Homebrew tap for macOS and Linux:
 
 ```bash
 brew tap bwhaley/ssmsh https://github.com/bwhaley/ssmsh
 brew install ssmsh
 ```
 
-### Nix
+A community-maintained [Nix package](https://search.nixos.org/packages?channel=unstable&show=ssmsh&query=ssmsh) is also available.
 
-There is also [a Nix package](https://search.nixos.org/packages?channel=unstable&show=ssmsh&query=ssmsh) available for MacOS and Linux:
+### Upgrading from v1
 
-```bash
-nix-env -i ssmsh
-```
+Version 2 updates the CLI behavior as well as its dependencies. Before upgrading automation or shared environments, account for these changes:
 
-## Configuration
+- Source builds require Go 1.27.1.
+- `get` and `history` use stable tab-separated text output. Use `-output value` for values alone or `-output json` for structured records.
+- Command failures now produce a nonzero exit status, batch files stop at the first failure, and `get` fails if any requested name is missing.
+- Configuration files accept only the documented keys in `[default]`; an explicitly selected missing file is an error.
+- An unset profile uses the complete AWS SDK credential chain instead of selecting the `default` profile explicitly.
+- Copying preserves tags and therefore needs `ssm:ListTagsForResource` and `ssm:AddTagsToResource`. Cross-region SecureString copies need a destination KMS key.
+- Consumers of the Go packages must migrate to context-aware APIs and AWS SDK for Go v2 types.
 
-Set up [AWS credentials](http://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials).
+See the [v2.0.0 changelog](CHANGELOG.md#200---2026-09-24) for the complete release notes.
 
-You can set up a `.ssmshrc` to configure `ssmsh`. By default, `ssmsh` will load `~/.ssmshrc` if it exists. Use the `-config` argument to set a different path.
+## AWS configuration
 
-```bash
+`ssmsh` uses the AWS SDK for Go v2 credential chain. Environment credentials, shared profiles, IAM roles, web identity credentials, workload credentials, and IAM Identity Center (SSO) profiles are supported. Configure credentials using the [AWS SDK and Tools reference guide](https://docs.aws.amazon.com/sdkref/latest/guide/standardized-credentials.html).
+
+An optional `~/.ssmshrc` sets command defaults:
+
+```ini
 [default]
 type=SecureString
-overwrite=true
-decrypt=true
+overwrite=false
+decrypt=false
 profile=my-profile
 region=us-east-1
-key=3example-89a6-4880-b544-73ad3db2ff3b
-output=json
+key=alias/parameter-store
+output=text
 ```
 
-A few notes on configuration:
-* When setting the region, the `AWS_REGION` env var takes top priority, followed by the setting in `.ssmshrc`, followed by the value set in the AWS profile (if configured)
-* When setting the profile, the `AWS_PROFILE` env var takes top priority, followed by the setting in `.ssmshrc`
-* If you set a KMS key, it will only work in the region where that key is located. You can use the `key` command while in the shell to change the key.
-* If the configuration file has `output=json`, the results of the `get` and `history` commands will be printed in JSON. The fields of the JSON results will be the same as in the respective Go structs. See the [`Parameter`](https://docs.aws.amazon.com/sdk-for-go/api/service/ssm/#Parameter) and [`ParameterHistory`](https://docs.aws.amazon.com/sdk-for-go/api/service/ssm/#ParameterHistory) docs.
+Use `-config path` to select another file. A missing explicitly selected file is an error; a missing default `~/.ssmshrc` is allowed.
+
+`AWS_PROFILE` takes precedence over the configured profile. `AWS_REGION` takes precedence over the configured region. When neither is set, the AWS SDK resolves its usual environment, shared-config, and workload defaults. An empty profile leaves the complete SDK credential chain available.
+
+Supported output modes are `text`, `json`, and `value`. Set one in the configuration file or with `-output`. JSON uses records owned by `ssmsh`, so SDK upgrades do not silently change the output field set.
 
 ## Usage
-### Help
-```bash
-/> help
 
-Commands:
-cd           change your relative location within the parameter store
-clear        clear the screen
-cp           copy source to dest
-decrypt      toggle parameter decryption
-exit         exit the program
+Run `ssmsh` for the interactive shell, pass a command directly, or read commands from a file:
+
+```bash
+ssmsh
+ssmsh get /service/api/endpoint
+ssmsh -output value get /service/api/password
+ssmsh -file commands.txt
+cat commands.txt | ssmsh -file -
+```
+
+Every command has a two-minute timeout by default. Change it with a Go duration such as `-timeout 30s`. Ctrl-C cancels an in-flight command.
+
+Use `help` or `help COMMAND` to inspect available commands:
+
+```text
+cd           change parameter directory
+cp           copy parameters
+decrypt      set parameter decryption
+exit         exit the interactive shell
 get          get parameters
-help         display help
 history      get parameter history
-key          set the KMS key
+key          set the destination KMS key
 ls           list parameters
 mv           move parameters
-policy       create named parameter policy
-profile      switch to a different AWS IAM profile
-put          set parameter
-region       change region
+policy       create a named parameter policy
+profile      switch AWS profile
+put          set a parameter
+region       switch AWS region
 rm           remove parameters
 ```
 
-### List contents of a path
-Note: Listing a large number of parameters may take a long time because the maximum number of results per API call is 10. Press ^C to interrupt if a listing is taking too long. Example usage:
-```bash
-/> ls
-dev/
-/> ls -r
-/dev/app/url
-/dev/db/password
-/dev/db/username
-/> ls /dev/app
-url
-/>
+### Paths and regions
+
+Paths may be absolute or relative to the current Parameter Store directory. Prefix a path with a region to target another region:
+
+```text
+cd /service
+ls api
+get api/endpoint
+get us-east-1:/service/api/endpoint us-west-2:/service/api/endpoint
+ls -r eu-central-1:/service
 ```
 
-### Change dir and list from current working dir
-```bash
-/> cd /dev
-/dev> ls
-app/
-db/
-/dev>
-```
+Use `profile NAME` and `region NAME` to switch the active AWS configuration. The new configuration is validated before the current client cache is replaced.
 
-### Get a parameter
-```bash
-/> get /dev/db/username
-[{
-  ARN: "arn:aws:ssm:us-east-1:012345678901:parameter/dev/db/username",
-  LastModifiedDate: 2019-09-29 23:22:19 +0000 UTC,
-  Name: "/dev/db/username",
-  Type: "SecureString",
-  Value: "foo",
-  Version: 1
-}]
-/> cd /dev/db
-/dev/db> get ../app/url
-[{
-  ARN: "arn:aws:ssm:us-east-1:318677964956:parameter/dev/app/url",
-  LastModifiedDate: 2019-09-29 23:22:49 +0000 UTC,
-  Name: "/dev/app/url",
-  Type: "SecureString",
-  Value: "https://www.example.com",
-  Version: 1
-}]
-/dev/db>
-```
-
-### Toggle decryption for SecureString parameters
-```bash
-/> decrypt
-Decrypt is false
-/> decrypt true
-Decrypt is true
-/>
-```
-
-### Get parameter history
-```bash
-/> history /dev/app/url
-[{
-  KeyId: "alias/aws/ssm",
-  Labels: [],
-  LastModifiedDate: 2019-09-29 23:22:49 +0000 UTC,
-  LastModifiedUser: "arn:aws:iam::318677964956:root",
-  Name: "/dev/app/url",
-  Policies: [],
-  Tier: "Standard",
-  Type: "SecureString",
-  Value: "https://www.example.com",
-  Version: 1
-}]
-```
-
-### Copy a parameter
-```bash
-/> cp /dev/app/url /test/app/url
-/> ls -r /dev/app /test/app
-/dev/app:
-/dev/app/url
-/test/app:
-/test/app/url
-```
-
-### Copy an entire hierarchy
-```bash
-/> cp -r /dev /test
-/> ls -r /test
-/test/app/url
-/test/db/password
-/test/db/username
-```
-
-### Remove parameters
-```bash
-/> rm /test/app/url
-/> ls -r /test
-/test/db/password
-/test/db/username
-/> rm -r /test
-/> ls -r /test
-/>
-```
-
-### Put new parameters
-```bash
-Multiline:
-/> put
-Input options. End with a blank line.
-... name=/dev/app/domain
-... value="www.example.com"
-... type=String
-... description="The domain of the app in dev"
-...
-/>
-```
-Single line version:
+### Reading values and history
 
 ```bash
-/> put name=/dev/app/domain value="www.example.com" type=String description="The domain of the app in dev"
+ssmsh get /service/api/endpoint
+ssmsh -output json history /service/api/endpoint
+ssmsh -output value get /service/api/password
 ```
 
-Put with a value containing line breaks:
+SecureString values are encrypted in responses unless decryption is enabled:
 
-```
-/>put name=/secrets/key/private type=SecureString value="-----BEGIN RSA PRIVATE KEY-----\
-... data\
-... -----END RSA PRIVATE KEY-----"
-Put /secrets/key/private version 1
+```text
+decrypt true
+decrypt false
 ```
 
-### Advanced parameters with policies
-Use [parameter policies](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-policies.html) to do things like expire (automatically delete) parameters at a specified time:
+### Creating parameters
+
+Supply a value directly, read it byte-for-byte from a file, or read it from standard input:
+
 ```bash
-/> policy urlExpiration Expiration(Timestamp=2013-03-31T21:00:00.000Z)
-/> policy ReminderPolicy ExpirationNotification(Before=30,Unit=days) NoChangeNotification(After=7,Unit=days)
-/> put name=/dev/app/url value="www.example.com" type=String policies=[urlExpiration,ReminderPolicy]
+ssmsh put name=/service/api/endpoint value=https://example.com type=String
+ssmsh put name=/service/api/private-key value-file=private.pem type=SecureString
+printf '%s' "$SECRET" | ssmsh put name=/service/api/password value-stdin=true type=SecureString
 ```
 
-### Switch AWS profile
-Switches to another profile as configured in `~/.aws/config`.
+`value-file` and `value-stdin` preserve whitespace and newlines. `value-stdin` cannot be combined with `-file -`, because both would consume the same stream. Inline values may be visible in shell history or process listings; prefer a file or standard input for secrets.
+
+Interactive `put` with no arguments reads one `name=value` option per line until an empty line. Interactive command history remains in memory and is not written to disk.
+
+Advanced parameter policies can be named and reused during a session:
+
+```text
+policy expiry Expiration(Timestamp=2030-01-01T00:00:00Z)
+policy notices ExpirationNotification(Before=30,Unit=days) NoChangeNotification(After=7,Unit=days)
+put name=/service/api/token value-file=token type=SecureString policies=[expiry,notices]
+```
+
+### Copying, moving, and removing
+
+```text
+cp /service/api/endpoint /backup/endpoint
+cp -r /service /backup
+mv /service/old-name /service/new-name
+rm /service/api/endpoint
+rm -r /service/obsolete
+```
+
+Copy preserves the current value, description, allowed pattern, data type, tier, policies, and tags. A cross-region SecureString copy requires a destination KMS key:
+
+```text
+cp key=alias/destination -r us-east-1:/service us-west-2:/service
+```
+
+You can also set the active destination key with `key KEY_ID_OR_ALIAS`.
+
+`mv` copies every destination before deleting any source. If copying fails, sources remain. If source cleanup fails after a successful copy, the error identifies that the destinations exist and cleanup is incomplete.
+
+Preview mutations with the global option or a command option:
+
 ```bash
-/> profile
-default
-/> profile project1
-/> profile
-project1
+ssmsh -dry-run rm -r /service/obsolete
+ssmsh cp --dry-run -r /service /backup
+ssmsh mv --dry-run /service/old /service/new
 ```
 
-### Change active region
+Dry-run output contains names and regions, never parameter values.
+
+### Batch behavior
+
+Batch files support blank lines, comments beginning with `#`, and shell-style quoting. Execution stops at the first invalid command or AWS error and returns a nonzero exit status. Error messages identify the line number without echoing the command, which could contain a secret.
+
+```text
+# commands.txt
+put name=/service/api/endpoint value="https://example.com" type=String
+cp /service/api/endpoint /backup/api/endpoint
+rm /service/api/old-endpoint
+```
+
+## Development
+
+The project requires Go 1.27.1. Common checks are exposed through the Makefile:
+
 ```bash
-/> region eu-central-1
-/> region
-eu-central-1
-/>
+make check          # format, vet, and race-enabled tests
+make lint           # static analysis
+make vuln           # reachable vulnerability analysis
+make build          # bin/ssmsh
+make snapshot       # local GoReleaser snapshot
 ```
 
-### Operate on other regions
-A few examples of working with regions.
-```bash
-/> put region=eu-central-1  name=/dev/app/domain value="www.example.com" type=String description="The domain of the app in dev"
-/> cp -r us-east-1:/dev us-west-2:/dev
-/> ls -r us-west-2:/dev
-/> region us-east-2
-/> get us-west-2:/dev/db/username us-east-1:/dev/db/password
-```
-
-###  Read commands in batches
-```bash
-$ cat << EOF > commands.txt
-put name=/dev/app/domain value="www.example.com" type=String description="The domain of the app in dev"
-rm /dev/app/domain
-cp -r /dev /test
-EOF
-$ ssmsh -file commands.txt
-$ cat commands.txt | ssmsh -file -  # Read commands from STDIN
-```
-
-###  Inline commands
-```
-$ ssmsh put name=/dev/app/domain value="www.example.com" type=String description="The domain of the app in dev"
-```
-
-## todo (maybe)
-* [ ] Flexible and improved output formats
-* [ ] Release via homebrew
-* [ ] Copy between accounts using profiles
-* [ ] Find parameter
-* [ ] Integration w/ CloudWatch Events for scheduled parameter updates
-* [ ] Export/import
-* [ ] Support globbing and/or regex
-* [ ] In memory parameter cache
-* [ ] Read parameters as local env variables
-
+CI runs tests on Linux, macOS, and Windows, checks the module files, runs vulnerability analysis, and builds a release snapshot. Tagged releases use the pinned GoReleaser version and refresh the source-based Homebrew formula.
 
 ## License
+
 MIT
-
-## Contributing/compiling
-1. Ensure you have at least go v1.17
-```
-$ go version
-go version go1.17.6 darwin/arm64
-```
-2. Ensure your `$GOPATH` exists and is in your `$PATH`
-```
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
-```
-3. Run `go get github.com/bwhaley/ssmsh`
-4. Run `cd $GOPATH/src/github.com/bwhaley/ssmsh && make` to build and install the binary to `$GOPATH/bin/ssmsh`
-
-
-## Related tools
-Tool | Description
----- | -----------
-[Chamber](https://github.com/segmentio/chamber) | A tool for managing secrets
-[Parameter Store Manager](https://github.com/smblee/parameter-store-manager) | A GUI for working with the Parameter Store
-[ssmple](https://github.com/adamcin/ssmple) | Serialize parameter store to properties
-
-## Credits
-Library | Use
-------- | -----
-[abiosoft/ishell](https://github.com/abiosoft/ishell) | The interactive shell for golang
-[aws-sdk-go](https://github.com/aws/aws-sdk-go) | The AWS SDK for Go
-[mattn/go-shellwords](github.com/mattn/go-shellwords) | Parsing for the shell made easy

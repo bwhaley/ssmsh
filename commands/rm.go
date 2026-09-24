@@ -1,33 +1,35 @@
 package commands
 
 import (
-	"github.com/abiosoft/ishell"
+	"fmt"
+
 	"github.com/bwhaley/ssmsh/parameterstore"
 )
 
-const rmUsage string = `
-usage: rm -[r|R] parameter ...
-Remove parameters. Separate multiple parameters with spaces. Parameters may be
-absolute or relative.
--[r|R] Remove parameters recursively
-Example usage:
-/> rm /foo/bar /baz
-/> rm -R /foo/
-`
+const rmUsage = "rm [-rR] [--dry-run] [region:]path ..."
 
-func rm(c *ishell.Context) {
-	var err error
-	var parameterPaths []parameterstore.ParameterPath
-	paths, recurse := checkRecursion(c.Args)
-	if len(paths) >= 1 {
-		for _, p := range paths {
-			parameterPaths = append(parameterPaths, parsePath(p))
+func rm(c *Context) error {
+	args, recursive := checkRecursion(c.Args)
+	old := ps.DryRun
+	defer func() { ps.DryRun = old }()
+	var paths []parameterstore.ParameterPath
+	for _, arg := range args {
+		if arg == "--dry-run" {
+			ps.DryRun = true
+			continue
 		}
-		err = ps.Remove(parameterPaths, recurse)
+		p, err := parsePath(arg)
 		if err != nil {
-			shell.Println("Error: ", err)
+			return err
 		}
-	} else {
-		shell.Println(rmUsage, err)
+		paths = append(paths, p)
 	}
+	if len(paths) == 0 {
+		return fmt.Errorf("usage: %s", rmUsage)
+	}
+	err := ps.Remove(commandContext, paths, recursive)
+	if err == nil && ps.DryRun && !old {
+		err = printJSON(ps.Actions)
+	}
+	return err
 }

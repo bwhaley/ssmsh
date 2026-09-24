@@ -1,37 +1,23 @@
 package commands
 
 import (
+	"fmt"
 	"strconv"
-
-	"github.com/abiosoft/ishell"
 )
 
-const decryptUsage string = `
-decrypt usage: decrypt
-Toggles decryption of SecureString parameter values. Default is false.
-`
+const decryptUsage = "decrypt [true|false]"
 
-const decryptError = "value for decrypt must be boolean"
-
-// decrypt determines parameter decryption for SecureString values
-func decrypt(c *ishell.Context) {
+func decrypt(c *Context) error {
+	if len(c.Args) > 1 {
+		return fmt.Errorf("usage: %s", decryptUsage)
+	}
 	if len(c.Args) == 1 {
 		v, err := strconv.ParseBool(c.Args[0])
 		if err != nil {
-			shell.Println(decryptError)
-			return
+			return fmt.Errorf("decrypt requires true or false")
 		}
-
-		switch v {
-		case true:
-			ps.Decrypt = true
-		case false:
-			ps.Decrypt = false
-		default:
-			shell.Println(decryptError)
-		}
-	} else if len(c.Args) > 1 {
-		shell.Println(decryptError)
+		ps.Decrypt = v
 	}
 	shell.Println("Decrypt is", ps.Decrypt)
+	return nil
 }

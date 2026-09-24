@@ -1,26 +1,22 @@
 package commands
 
 import (
-	"github.com/abiosoft/ishell"
+	"fmt"
 )
 
-const (
-	historyUsage = `
-usage: history parameter
-Display modification the history of a parameter.
-`
-)
+const historyUsage = "history [region:]parameter"
 
-// history prints the history of a parameter
-func history(c *ishell.Context) {
+func history(c *Context) error {
 	if len(c.Args) != 1 {
-		shell.Println(historyUsage)
-		return
+		return fmt.Errorf("usage: %s", historyUsage)
 	}
-	resp, err := ps.GetHistory(parsePath(c.Args[0]))
+	p, err := parsePath(c.Args[0])
 	if err != nil {
-		shell.Println("Error: ", err)
-	} else {
-		printResult(resp)
+		return err
 	}
+	out, err := ps.GetHistory(commandContext, p)
+	if err != nil {
+		return err
+	}
+	return printHistory(out)
 }
