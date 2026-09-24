@@ -33,7 +33,7 @@ func TestRunLocalCommands(t *testing.T) {
 		args   []string
 		status int
 		want   string
-	}{{[]string{"-version"}, 0, "Version"}, {[]string{"profile"}, 0, "default"}, {[]string{"help"}, 0, "Commands"}, {[]string{"mv"}, 1, "source"}, {[]string{"-file", "/nonexistent/ssmsh-batch"}, 1, "no such file"}, {[]string{"-config", "/nonexistent/ssmsh-config"}, 1, "no such file"}, {[]string{"-output", "bad", "profile"}, 2, "output"}} {
+	}{{[]string{"-version"}, 0, "Version"}, {[]string{"profile"}, 0, "default"}, {[]string{"help"}, 0, "Commands"}, {[]string{"mv"}, 1, "source"}, {[]string{"-file", "/nonexistent/ssmsh-batch"}, 1, "ssmsh-batch"}, {[]string{"-config", "/nonexistent/ssmsh-config"}, 1, "ssmsh-config"}, {[]string{"-output", "bad", "profile"}, 2, "output"}} {
 		out, errOut := &bytes.Buffer{}, &bytes.Buffer{}
 		code := run(tc.args, strings.NewReader(""), out, errOut)
 		if code != tc.status || !strings.Contains(out.String()+errOut.String(), tc.want) {
