@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.33.6
 	github.com/aws/aws-sdk-go-v2/service/kms v1.61.1
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.78.1
-	github.com/mattn/go-shellwords v1.0.15
+	github.com/mattn/go-shellwords v1.0.16
 	github.com/reeflective/readline v1.3.0
 )
 
