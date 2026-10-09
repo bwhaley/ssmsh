@@ -68,6 +68,7 @@ func Init(out io.Writer, readLine func() (string, error), store *parameterstore.
 	shell = &console{out: out, readLine: readLine}
 	ps, cfg = store, configuration
 	handlers = make(map[string]command)
+	clearCompletionCache()
 	policies = make(map[string]parameterPolicies)
 	registerCommand("cd", "change parameter directory", cd, cdUsage)
 	registerCommand("cp", "copy parameters", cp, cpUsage)
@@ -108,6 +109,11 @@ func Execute(ctx context.Context, args []string) error {
 	entry, ok := handlers[args[0]]
 	if !ok {
 		return fmt.Errorf("unknown command %q", args[0])
+	}
+	// Invalidate even after partial writes that return an error.
+	switch args[0] {
+	case "put", "cp", "mv", "rm", "profile", "region":
+		defer clearCompletionCache()
 	}
 	ctx, cancel := context.WithTimeout(ctx, Timeout)
 	defer cancel()

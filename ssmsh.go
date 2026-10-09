@@ -105,6 +105,9 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 func runInteractive(stdout, stderr io.Writer, ps *parameterstore.ParameterStore, cfg *config.Config) int {
 	shell := readline.NewShell()
 	shell.Prompt.Primary(commands.Prompt)
+	shell.Completer = commands.Complete
+	// Remote completion is explicit, never a request on every keystroke.
+	_ = shell.Config.Set("autocomplete", false)
 	commands.Init(stdout, shell.Readline, ps, cfg)
 	for {
 		line, err := shell.Readline()
