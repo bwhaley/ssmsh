@@ -12,7 +12,7 @@ endpoint
 
 ## Installation
 
-Download macOS, Linux, or Windows archives from [GitHub Releases](https://github.com/bwhaley/ssmsh/releases), or install the current source with Go 1.27.1:
+Download macOS, Linux, or Windows archives from [GitHub Releases](https://github.com/bwhaley/ssmsh/releases), or install the current source with Go 1.27.2:
 
 ```bash
 go install github.com/bwhaley/ssmsh@latest
@@ -31,7 +31,7 @@ A community-maintained [Nix package](https://search.nixos.org/packages?channel=u
 
 Version 2 updates the CLI behavior as well as its dependencies. Before upgrading automation or shared environments, account for these changes:
 
-- Source builds require Go 1.27.1.
+- Source builds require Go 1.27.2.
 - `get` and `history` use stable tab-separated text output. Use `-output value` for values alone or `-output json` for structured records.
 - Command failures now produce a nonzero exit status, batch files stop at the first failure, and `get` fails if any requested name is missing.
 - Configuration files accept only the documented keys in `[default]`; an explicitly selected missing file is an error.
@@ -191,7 +191,7 @@ rm /service/api/old-endpoint
 
 ## Development
 
-The project requires Go 1.27.1. Common checks are exposed through the Makefile:
+The project requires Go 1.27.2. Common checks are exposed through the Makefile:
 
 ```bash
 make check          # format, vet, and race-enabled tests
