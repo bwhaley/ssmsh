@@ -2,8 +2,8 @@
 class Ssmsh < Formula
   desc "Interactive shell for AWS Systems Manager Parameter Store"
   homepage "https://github.com/bwhaley/ssmsh"
-  url "https://github.com/bwhaley/ssmsh/releases/download/v2.0.0/ssmsh_2.0.0_source.tar.gz"
-  sha256 "fb1f679d7463c83e49d61559d5402cb6ae7e51db575d0f1c0d21c7e4b4d3785b"
+  url "https://github.com/bwhaley/ssmsh/releases/download/v2.1.0/ssmsh_2.1.0_source.tar.gz"
+  sha256 "b47b443ba5ffbc12798259854488901254b2facacd58f8110e069b80ebad6497"
   license "MIT"
 
   depends_on "go" => :build
