@@ -140,6 +140,21 @@ printf '%s' "$SECRET" | ssmsh put name=/service/api/password value-stdin=true ty
 
 Interactive `put` with no arguments reads one `name=value` option per line until an empty line. Interactive command history remains in memory and is not written to disk.
 
+Press Tab to complete command names and parameter paths; press Tab again to explore
+ambiguous matches. For example, `ls /nonprod/pas` completes matching names or
+subdirectories. Completion supports relative paths, `region:` prefixes, and
+`put name=...`; `cd` suggests directories only. Quoted tokens and completion in the
+middle of a word are left unchanged.
+
+Path completion requires `ssm:DescribeParameters`. It requests metadata only and
+never reads or decrypts parameter values. Results are cached in memory for 30
+seconds, scoped to the profile, region, and resolved prefix. Writes and profile or
+region commands clear the cache, including failed commands that may have partially
+changed remote state. Lookups stop after two seconds or ten pages of up to 50
+parameters; incomplete results are discarded, with a message to narrow the prefix
+when the page limit is reached. Permission and network errors leave normal command
+execution available. Completion runs on Tab, not on every keystroke.
+
 Advanced parameter policies can be named and reused during a session:
 
 ```text
