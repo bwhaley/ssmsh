@@ -35,11 +35,11 @@ jobs:
       - run: go mod tidy && git diff --exit-code -- go.mod go.sum
       - run: make lint
       - run: make vuln
-      - uses: goreleaser/goreleaser-action@v7.2.3
+      - uses: goreleaser/goreleaser-action@v7.3.0
         with:
           version: v2.18.2
           args: check
-      - uses: goreleaser/goreleaser-action@v7.2.3
+      - uses: goreleaser/goreleaser-action@v7.3.0
         with:
           version: v2.18.2
           args: release --snapshot --clean
